@@ -12,3 +12,9 @@ Makefile
 
 # Exclude
 !Vendor/Binaries
+
+build/
+
+bin/
+
+bin-int/

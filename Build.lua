@@ -1,8 +1,9 @@
 -- premake5.lua
-workspace "New Project"
+workspace "Chat Application"
    architecture "x64"
    configurations { "Debug", "Release", "Dist" }
    startproject "App"
+   -- location "build"
 
    -- Workspace-wide build options for MSVC
    filter "system:windows"
