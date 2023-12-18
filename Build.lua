@@ -1,18 +1,22 @@
 -- premake5.lua
-workspace "Chat Application"
+workspace "Loc-Chat"
    architecture "x64"
    configurations { "Debug", "Release", "Dist" }
-   startproject "App"
-   -- location "build"
+--    location "build"
+   startproject "Loc-ChatApp"
 
    -- Workspace-wide build options for MSVC
    filter "system:windows"
       buildoptions { "/EHsc", "/Zc:preprocessor", "/Zc:__cplusplus" }
 
-OutputDir = "%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}"
+-- Directories
+outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+WalnutNetworkingBinDir = "Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/bin/%{cfg.system}/%{cfg.buildcfg}/"
 
-group "Core"
-	include "Core/Build-Core.lua"
+include "Walnut/Build-Walnut-External.lua"
+
+group "Loc-ChatApp"
+    include "App-Common/Build-App-Common.lua"
+    include "App-Client/Build-App-Client.lua"
+    include "App-Server/Build-App-Server.lua"
 group ""
-
-include "App/Build-App.lua"
