@@ -2,6 +2,8 @@
 
 #include "User-Utils.hpp"
 
+User::User() {}
+
 User::User(int user_id, std::string username, std::string password,
            std::string fullname, bool active, bool online) {
     if (!validate_user_password(password)) {

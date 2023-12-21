@@ -33,14 +33,14 @@ public:
     friend std::ostream& operator<<(std::ostream& out, const User& user);
 
 private:
-    int m_user_id;
-    std::string m_username;
-    std::string m_password;
-    std::string m_fullname;
-    bool m_active;
-    bool m_online;
+    int m_user_id{};
+    std::string m_username{};
+    std::string m_password{};
+    std::string m_fullname{};
+    bool m_active{};
+    bool m_online{};
     // date_of_birth
     // profile_photo
-    std::vector< int > m_group_list;
-    std::vector< int > m_friend_list;
+    std::vector< int > m_group_list{};
+    std::vector< int > m_friend_list{};
 };
