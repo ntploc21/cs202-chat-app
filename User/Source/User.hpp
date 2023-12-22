@@ -6,6 +6,7 @@
 class User {
 public:
     // make it as a builder using builder design pattern
+    User();
     User(int user_id, std::string username, std::string password,
          std::string fullname, bool active, bool online);
     virtual ~User() = default;
