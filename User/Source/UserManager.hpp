@@ -23,15 +23,14 @@ public:
 	std::vector< User > filter(
             std::unique_ptr< ISpecification< User > >& spec);
 
-	std::optional<User> findByUsernameAndPassword( std::string username, std::string password );
+	std::optional<User> findByUsernameAndPassword( std::string_view username, std::string_view password );
 
+private:
 	void save_users();
 	void load_users();
 
-
-private:
 	int findById( int id );
-	int findByUsername( std::string username );
+	int findByUsername( std::string_view username );
 
 
 private:

@@ -49,7 +49,7 @@ std::vector< User > UserManager::filter(
 }
 
 std::optional< User > UserManager::findByUsernameAndPassword(
-    std::string username, std::string password) {
+    std::string_view username, std::string_view password) {
     int pos = findByUsername(username);
     if (pos != -1) {
         if (m_users[pos].get_password() == password) {
@@ -79,7 +79,7 @@ int UserManager::findById(int user_id) {
     return -1;
 }
 
-int UserManager::findByUsername(std::string username) {
+int UserManager::findByUsername(std::string_view username) {
     for (int i = 0; i < m_users.size(); i++) {
         if (m_users[i].get_username() == username) {
             return i;
