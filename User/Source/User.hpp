@@ -1,4 +1,5 @@
 #pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -33,7 +34,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const User& user);
 
-private:
+//private:
     int m_user_id{};
     std::string m_username{};
     std::string m_password{};

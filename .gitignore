@@ -18,3 +18,5 @@ build/
 bin/
 
 bin-int/
+
+*.ini
