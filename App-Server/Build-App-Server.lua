@@ -12,6 +12,7 @@ project "App-Server"
 	   "../User/Source",
       "../Authentication/Source",
       "../App-Common/Source",
+      "../Message/Source",
 
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
@@ -34,6 +35,7 @@ project "App-Server"
       "App-Common",
 	   "User",
       "Authentication",
+      "Message",
        
       "yaml-cpp",
    }

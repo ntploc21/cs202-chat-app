@@ -1,5 +1,5 @@
-project "App-Client"
-   kind "ConsoleApp"
+project "Message"
+   kind "StaticLib"
    language "C++"
    cppdialect "C++20"
    targetdir "bin/%{cfg.buildcfg}"
@@ -9,41 +9,27 @@ project "App-Client"
 
    includedirs
    {
-	   "../User/Source",
       "../App-Common/Source",
-      "../Authentication/Source",
-      "../Message/Source",
+      
 
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
       "../Walnut/vendor/glm",
 
       "../Walnut/Walnut/Source",
-      "../Walnut/Walnut/Platform/GUI",
+      "../Walnut-Networking/Source",
 
       "%{IncludeDir.VulkanSDK}",
       "../Walnut/vendor/spdlog/include",
-      "../Walnut/vendor/yaml-cpp/include",
-      
-      -- Walnut-Networking
-      "../Walnut/Walnut-Modules/Walnut-Networking/Source",
-      "../Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/include"
+
+      "../Walnut-Networking/vendor/GameNetworkingSockets/include"
    }
 
    links
    {
-      "App-Common",
-	   "User",
-      "Authentication",
-      "Message",
-
-      "yaml-cpp",
+       "Walnut",
+       "Walnut-Networking",
    }
-
-   	defines
-	{
-		"YAML_CPP_STATIC_DEFINE"
-	}
 
    targetdir ("../bin/" .. outputdir .. "/%{prj.name}")
    objdir ("../bin-int/" .. outputdir .. "/%{prj.name}")
@@ -51,13 +37,6 @@ project "App-Client"
    filter "system:windows"
       systemversion "latest"
       defines { "WL_PLATFORM_WINDOWS" }
-
-      postbuildcommands 
-	  {
-	    '{COPY} "../%{WalnutNetworkingBinDir}/GameNetworkingSockets.dll" "%{cfg.targetdir}"',
-	    '{COPY} "../%{WalnutNetworkingBinDir}/libcrypto-3-x64.dll" "%{cfg.targetdir}"',
-	    '{COPY} "../%{WalnutNetworkingBinDir}/libprotobufd.dll" "%{cfg.targetdir}"',
-	  }
 
    filter "configurations:Debug"
       defines { "WL_DEBUG" }
@@ -71,7 +50,6 @@ project "App-Client"
       symbols "On"
 
    filter "configurations:Dist"
-      kind "WindowedApp"
       defines { "WL_DIST" }
       runtime "Release"
       optimize "On"
