@@ -1,6 +1,9 @@
+#pragma once
+
+#include <optional>
+
 #include "User.hpp"
 #include "UserFilter.hpp"
-#include <optional>
 
 /*
 User Manager roles
@@ -21,40 +24,29 @@ public:
 
 private:
     UserManager();
-	~UserManager();
+    ~UserManager();
 
-	int add_user( User user );
-	bool delete_user(int user_id);
-	bool update_user( User user );
-	User get_user( int user_id );
-	std::vector< User > get_users();
-
-	std::vector< User > filter(
-            std::unique_ptr< ISpecification< User > >& spec);
-
-<<<<<<< Updated upstream
-	std::optional<User> findByUsernameAndPassword( std::string username, std::string password );
-=======
 public:
-
 
     int add_user(User user);
     bool delete_user(int user_id);
     bool update_user(User user);
     User get_user(int user_id);
     std::vector< User > get_users();
->>>>>>> Stashed changes
 
-	void save_users();
-	void load_users();
+    std::vector< User > filter(std::unique_ptr< ISpecification< User > >& spec);
 
-
-private:
-	int findById( int id );
-	int findByUsername( std::string username );
-
+    std::optional< User > findByUsernameAndPassword(std::string_view username,
+                                                    std::string_view password);
 
 private:
-	std::vector< User > m_users{};
-    int m_next_id { 0 };
+    void save_users();
+    void load_users();
+
+    int findById(int id);
+    int findByUsername(std::string_view username);
+
+private:
+    std::vector< User > m_users{};
+    int m_next_id{0};
 };

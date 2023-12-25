@@ -1,5 +1,4 @@
 #include "Authenticator.hpp"
-
 #include "UserManager.hpp"
 
 Authenticator::Authenticator() {

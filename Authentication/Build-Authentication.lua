@@ -10,6 +10,7 @@ project "Authentication"
    includedirs
    {
       "../App-Common/Source",
+      "../User/Source",
       
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",

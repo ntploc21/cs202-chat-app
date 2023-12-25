@@ -2,7 +2,7 @@
 
 std::vector< User > UserFilter::filter(
     std::vector< User >& items,
-    std::unique_ptr< Specification< User > >& spec) {
+    std::unique_ptr< ISpecification< User > >& spec) {
     std::vector< User > result;
 
     for (auto& item : items) {

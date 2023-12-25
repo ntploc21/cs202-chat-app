@@ -39,6 +39,7 @@ private:
 
 private:
     std::vector< Session > m_sessions;
+    std::shared_ptr< UserManager > m_user_manager;
 
     int m_next_id{0};
 };

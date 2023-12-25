@@ -87,16 +87,6 @@ void ClientLayer::UI_ConnectionModal() {
 
         if (m_client->GetConnectionStatus() ==
             Walnut::Client::ConnectionStatus::Connected) {
-            // Send username
-            /*Walnut::BufferStreamWriter stream(m_ScratchBuffer);
-            stream.WriteRaw< PacketType >(PacketType::ClientConnectionRequest);
-            stream.WriteRaw< uint32_t >(m_Color);  // Color
-            stream.WriteString(m_Username);        // Username
-
-            m_client->SendBuffer(stream.GetBuffer());
-
-            SaveConnectionDetails(m_ConnectionDetailsFilePath);*/
-
             // Wait for response
             ImGui::CloseCurrentPopup();
         } else if (m_client->GetConnectionStatus() ==
@@ -132,8 +122,7 @@ void ClientLayer::UI_Login() {
         popup_title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     if (m_login_modal_open) {
         if (ImGui::CollapsingHeader("Login to an existing account",
-                                    ImGuiTreeNodeFlags_None)) {
-        }
+                                    ImGuiTreeNodeFlags_None)) {}
         ImGui::Text("Username");
         ImGui::InputText("##username", &current_user.m_username);
 
@@ -164,13 +153,13 @@ void ClientLayer::UI_Login() {
 
         if (ImGui::Button("Sign in")) {
             Walnut::BufferStreamWriter stream(m_scratch_buffer);
-			stream.WriteRaw< PacketType >(PacketType::ClientLoginRequest);
-			stream.WriteString(current_user.m_username);
-			stream.WriteString(current_user.m_password);
+            stream.WriteRaw< PacketType >(PacketType::ClientLoginRequest);
+            stream.WriteString(current_user.m_username);
+            stream.WriteString(current_user.m_password);
 
-			m_client->SendBuffer(stream.GetBuffer());
+            m_client->SendBuffer(stream.GetBuffer());
 
-			ImGui::CloseCurrentPopup();
+            ImGui::CloseCurrentPopup();
         }
 
         ImGui::SameLine();
@@ -202,8 +191,7 @@ void ClientLayer::UI_Register() {
         popup_title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     if (m_login_modal_open) {
         if (ImGui::CollapsingHeader("Register a new account",
-                                    ImGuiTreeNodeFlags_None)) {
-        }
+                                    ImGuiTreeNodeFlags_None)) {}
         ImGui::Text("Fullname");
         ImGui::InputText("##fullname", &current_user.m_fullname);
 
@@ -236,7 +224,6 @@ void ClientLayer::UI_Register() {
         if (off > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
 
         if (ImGui::Button("Sign up")) {
-
             Walnut::BufferStreamWriter stream(m_scratch_buffer);
             stream.WriteRaw< PacketType >(PacketType::ClientRegisterRequest);
             stream.WriteString(current_user.m_username);

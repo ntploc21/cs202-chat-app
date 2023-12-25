@@ -5,7 +5,7 @@ project "App-Client"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "src/**.h", "src/**.cpp", "Source/**.hpp" }
+   files { "Source/**.cpp", "Source/**.hpp" }
 
    includedirs
    {

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -35,17 +36,12 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const User& user);
 
-<<<<<<< Updated upstream
-private:
-=======
     static void Serialize(Walnut::StreamWriter* serializer,
                           const User& instance);
 
     static void Deserialize(Walnut::StreamReader* deserializer,
                             User& instance);
 
-    // private:
->>>>>>> Stashed changes
     int m_user_id{};
     std::string m_username{};
     std::string m_password{};

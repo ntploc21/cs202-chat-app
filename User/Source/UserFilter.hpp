@@ -1,3 +1,5 @@
+#pragma once
+
 #include "User.hpp"
 
 /* Use specification design pattern to implement filter feature */
