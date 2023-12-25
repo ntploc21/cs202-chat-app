@@ -27,6 +27,7 @@ project "Authentication"
 
    links
    {
+      "User",
        "Walnut",
        "Walnut-Networking",
    }

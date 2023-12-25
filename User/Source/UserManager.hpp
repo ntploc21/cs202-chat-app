@@ -14,8 +14,19 @@ User Manager roles
 
 class UserManager {
 public:
+    UserManager(UserManager const&) = delete;
+    void operator=(UserManager const&) = delete;
+    static UserManager& getInstance() {
+        static UserManager instance;  // Guaranteed to be destroyed.
+                            // Instantiated on first use.
+        return instance;
+    }
+
+private:
     UserManager();
     ~UserManager();
+
+public:
 
     int add_user(User user);
     bool delete_user(int user_id);

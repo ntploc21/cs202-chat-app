@@ -11,7 +11,11 @@ UserManager::~UserManager() {
 }
 
 int UserManager::add_user(User user) {
+    int user_pos = findByUsername(user.get_username());
+    if(user_pos != -1) return m_users[user_pos].get_user_id();
+
     user.set_user_id(++m_next_id);
+    m_users.push_back(user);
     return m_next_id;
 }
 

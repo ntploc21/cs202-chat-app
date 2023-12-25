@@ -1,12 +1,18 @@
 #include "Authenticator.hpp"
+#include "UserManager.hpp"
 
-Authenticator::Authenticator(std::shared_ptr< UserManager > user_manager)
-    : m_user_manager(user_manager) {}
+Authenticator::Authenticator() {
+    load_sessions();
+}
+
+Authenticator::~Authenticator() {
+    save_sessions();
+}
 
 std::optional< std::pair< User, Session > > Authenticator::authenticate(
     std::string_view username, std::string_view password) {
-    auto validate_result =
-        m_user_manager->findByUsernameAndPassword(username, password);
+    auto validate_result = UserManager::getInstance().findByUsernameAndPassword(
+        username, password);
 
     if (!validate_result.has_value()) return std::nullopt;
 
@@ -30,7 +36,7 @@ std::optional< User > Authenticator::validate_session(int session_id) {
                 remember to check if session is expired later
             */
 
-            return m_user_manager->get_user(session.get_user_id());
+            return UserManager::getInstance().get_user(session.get_user_id());
         }
     }
 
@@ -54,6 +60,18 @@ void Authenticator::remove_session(int session_id) {
             return;
         }
     }
+}
+
+Session Authenticator::add_session(int user_id) {
+    auto result = find_session_pos_by_user_id(user_id);
+    if (result.has_value()) {
+        m_sessions.erase(m_sessions.begin() + result.value());
+    }
+
+    Session session(m_next_id++, user_id);
+    m_sessions.push_back(session);
+
+    return session;
 }
 
 std::optional< int > Authenticator::find_session_pos_by_user_id(int user_id) {

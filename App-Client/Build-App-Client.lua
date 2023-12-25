@@ -9,8 +9,9 @@ project "App-Client"
 
    includedirs
    {
-	"../User/Source",
+	   "../User/Source",
       "../App-Common/Source",
+      "../Authentication/Source",
 
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
@@ -30,10 +31,11 @@ project "App-Client"
 
    links
    {
-       "App-Common",
-	"User",
+      "App-Common",
+	   "User",
+      "Authentication",
 
-       "yaml-cpp",
+      "yaml-cpp",
    }
 
    	defines

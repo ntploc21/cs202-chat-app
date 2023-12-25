@@ -4,52 +4,14 @@
 
 #include <iostream>
 
+#include "ServerPacket.hpp"
+#include "Session.hpp"
 #include "Walnut/Application.h"
 #include "Walnut/Networking/NetworkingUtils.h"
 #include "Walnut/Serialization/BufferStream.h"
 #include "Walnut/UI/UI.h"
 #include "Walnut/Utils/StringUtils.h"
 #include "misc/cpp/imgui_stdlib.h"
-
-/*class CenteredControlWrapper {
-public:
-    explicit CenteredControlWrapper(bool result) : result_(result) {}
-
-    operator bool() const { return result_; }
-
-private:
-    bool result_;
-};
-
-class ControlCenterer {
-public:
-    ControlCenterer(ImVec2 windowSize) : windowSize_(windowSize) {}
-
-    template< typename Func >
-    CenteredControlWrapper operator()(Func control) const {
-        ImVec2 originalPos = ImGui::GetCursorPos();
-
-        // Draw offscreen to calculate size
-        ImGui::SetCursorPos(ImVec2(-10000.0f, -10000.0f));
-        control();
-        ImVec2 controlSize = ImGui::GetItemRectSize();
-
-        // Draw at centered position
-        ImGui::SetCursorPosX(
-            std::max(0.0f, (windowSize_.x - controlSize.x) * 0.5f));
-        ImGui::SetCursorPosY(originalPos.y);
-        control();
-
-        return CenteredControlWrapper(ImGui::IsItemClicked());
-    }
-
-private:
-    ImVec2 windowSize_;
-};
-
-#define CENTERED_CONTROL(control) \
-    ControlCenterer{ImGui::GetWindowSize()}([&]() { control; })
-*/
 
 void ClientLayer::OnAttach() {
     m_scratch_buffer.Allocate(1024);
@@ -125,16 +87,6 @@ void ClientLayer::UI_ConnectionModal() {
 
         if (m_client->GetConnectionStatus() ==
             Walnut::Client::ConnectionStatus::Connected) {
-            // Send username
-            /*Walnut::BufferStreamWriter stream(m_ScratchBuffer);
-            stream.WriteRaw< PacketType >(PacketType::ClientConnectionRequest);
-            stream.WriteRaw< uint32_t >(m_Color);  // Color
-            stream.WriteString(m_Username);        // Username
-
-            m_client->SendBuffer(stream.GetBuffer());
-
-            SaveConnectionDetails(m_ConnectionDetailsFilePath);*/
-
             // Wait for response
             ImGui::CloseCurrentPopup();
         } else if (m_client->GetConnectionStatus() ==
@@ -169,8 +121,8 @@ void ClientLayer::UI_Login() {
     m_login_modal_open = ImGui::BeginPopupModal(
         popup_title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     if (m_login_modal_open) {
-        if (ImGui::CollapsingHeader("Sign in", ImGuiTreeNodeFlags_None)) {
-        }
+        if (ImGui::CollapsingHeader("Login to an existing account",
+                                    ImGuiTreeNodeFlags_None)) {}
         ImGui::Text("Username");
         ImGui::InputText("##username", &current_user.m_username);
 
@@ -200,6 +152,14 @@ void ClientLayer::UI_Login() {
         if (off > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
 
         if (ImGui::Button("Sign in")) {
+            Walnut::BufferStreamWriter stream(m_scratch_buffer);
+            stream.WriteRaw< PacketType >(PacketType::ClientLoginRequest);
+            stream.WriteString(current_user.m_username);
+            stream.WriteString(current_user.m_password);
+
+            m_client->SendBuffer(stream.GetBuffer());
+
+            ImGui::CloseCurrentPopup();
         }
 
         ImGui::SameLine();
@@ -230,8 +190,8 @@ void ClientLayer::UI_Register() {
     m_login_modal_open = ImGui::BeginPopupModal(
         popup_title.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     if (m_login_modal_open) {
-        if (ImGui::CollapsingHeader("Sign up", ImGuiTreeNodeFlags_None)) {
-        }
+        if (ImGui::CollapsingHeader("Register a new account",
+                                    ImGuiTreeNodeFlags_None)) {}
         ImGui::Text("Fullname");
         ImGui::InputText("##fullname", &current_user.m_fullname);
 
@@ -256,7 +216,7 @@ void ClientLayer::UI_Register() {
         ImGuiStyle& style = ImGui::GetStyle();
 
         float actualSize = ImGui::CalcTextSize("Sign up").x +
-                           ImGui::CalcTextSize("Quit").x +
+                           ImGui::CalcTextSize("Back").x +
                            style.FramePadding.x * 4.0f;
         float avail = ImGui::GetContentRegionAvail().x;
 
@@ -264,6 +224,15 @@ void ClientLayer::UI_Register() {
         if (off > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
 
         if (ImGui::Button("Sign up")) {
+            Walnut::BufferStreamWriter stream(m_scratch_buffer);
+            stream.WriteRaw< PacketType >(PacketType::ClientRegisterRequest);
+            stream.WriteString(current_user.m_username);
+            stream.WriteString(current_user.m_password);
+            stream.WriteString(current_user.m_fullname);
+
+            m_client->SendBuffer(stream.GetBuffer());
+
+            ImGui::CloseCurrentPopup();
         }
 
         ImGui::SameLine();
@@ -282,4 +251,33 @@ void ClientLayer::OnConnected() {}
 
 void ClientLayer::OnDisconnected() { m_client->Disconnect(); }
 
-void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {}
+void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
+    Walnut::BufferStreamReader stream(buffer);
+
+    PacketType type;
+    stream.ReadRaw< PacketType >(type);
+
+    switch (type) {
+        case PacketType::ClientRegisterRequest:
+        case PacketType::ClientLoginRequest:
+            bool success;
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+            } else {
+                Session session;
+                stream.ReadObject(session);
+
+                std::cout << "Register success" << std::endl;
+                std::cout << "Session id: " << session.get_session_id() << std::endl;
+                std::cout << "Session user id: " << session.get_user_id()
+						  << std::endl;
+
+            }
+            break;
+    }
+}

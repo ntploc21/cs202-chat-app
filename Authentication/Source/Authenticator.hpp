@@ -1,11 +1,26 @@
 #pragma once
 
 #include "Session.hpp"
-#include "UserManager.hpp"
+#include "User.hpp"
+#include <optional>
+#include <string_view>
 
 class Authenticator {
 public:
-    Authenticator(std::shared_ptr< UserManager > user_manager);
+    Authenticator(Authenticator const&) = delete;
+    void operator=(Authenticator const&) = delete;
+    static Authenticator& getInstance() {
+        static Authenticator instance;  // Guaranteed to be destroyed.
+                                      // Instantiated on first use.
+        return instance;
+    }
+
+private:
+    Authenticator();
+    ~Authenticator();
+
+
+public:
     std::optional< std::pair< User, Session > > authenticate(
         std::string_view username, std::string_view password);
 
@@ -14,6 +29,7 @@ public:
 
     std::optional< Session > get_session(int session_id) const;
     void remove_session(int session_id);
+    Session add_session(int user_id);
 
 private:
     std::optional< int > find_session_pos_by_user_id(int user_id);

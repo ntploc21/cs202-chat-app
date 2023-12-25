@@ -4,8 +4,8 @@
 
 User::User() {}
 
-User::User(int user_id, std::string username, std::string password,
-           std::string fullname, bool active, bool online) {
+User::User(std::string username, std::string password, std::string fullname,
+           int user_id, bool active, bool online) {
     if (!validate_user_password(password)) {
         throw std::invalid_argument("Invalid password");
     }
@@ -88,16 +88,16 @@ User& User::add_friend(int friend_id) {
 }
 
 User& User::remove_group(int group_id) {
-    this->m_group_list.erase(
-        std::remove(this->m_group_list.begin(), this->m_group_list.end(), group_id),
-        this->m_group_list.end());
+    this->m_group_list.erase(std::remove(this->m_group_list.begin(),
+                                         this->m_group_list.end(), group_id),
+                             this->m_group_list.end());
     return *this;
 }
 
 User& User::remove_friend(int friend_id) {
     this->m_friend_list.erase(std::remove(this->m_friend_list.begin(),
-                                        this->m_friend_list.end(), friend_id),
-                            this->m_friend_list.end());
+                                          this->m_friend_list.end(), friend_id),
+                              this->m_friend_list.end());
     return *this;
 }
 
@@ -120,4 +120,29 @@ std::ostream& operator<<(std::ostream& out, const User& user) {
     }
 
     return out;
+}
+
+
+
+void User::Serialize(Walnut::StreamWriter* serializer,
+                        const User& instance) {
+    serializer->WriteRaw< int >(instance.m_user_id);
+    serializer->WriteString(instance.m_username);
+    serializer->WriteString(instance.m_password);
+    serializer->WriteString(instance.m_fullname);
+    serializer->WriteRaw< bool >(instance.m_active);
+    serializer->WriteRaw< bool >(instance.m_online);
+    serializer->WriteArray(instance.m_group_list);
+    serializer->WriteArray(instance.m_friend_list);
+}
+
+void User::Deserialize(Walnut::StreamReader* deserializer, User& instance) {
+    deserializer->ReadRaw< int >(instance.m_user_id);
+	deserializer->ReadString(instance.m_username);
+	deserializer->ReadString(instance.m_password);
+	deserializer->ReadString(instance.m_fullname);
+	deserializer->ReadRaw< bool >(instance.m_active);
+	deserializer->ReadRaw< bool >(instance.m_online);
+	deserializer->ReadArray(instance.m_group_list);
+	deserializer->ReadArray(instance.m_friend_list);
 }

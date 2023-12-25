@@ -3,13 +3,15 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include "Walnut/Serialization/StreamReader.h"
+#include "Walnut/Serialization/StreamWriter.h"
 
 class User {
 public:
     // make it as a builder using builder design pattern
     User();
-    User(int user_id, std::string username, std::string password,
-         std::string fullname, bool active, bool online);
+    User(std::string username, std::string password, std::string fullname,
+         int user_id = 0, bool active = 1, bool online = 1);
     virtual ~User() = default;
     int get_user_id() const;
     std::string get_username() const;
@@ -34,7 +36,12 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const User& user);
 
-//private:
+    static void Serialize(Walnut::StreamWriter* serializer,
+                          const User& instance);
+
+    static void Deserialize(Walnut::StreamReader* deserializer,
+                            User& instance);
+
     int m_user_id{};
     std::string m_username{};
     std::string m_password{};
