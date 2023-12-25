@@ -5,7 +5,7 @@ project "App-Common"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "Source/**.h", "Source/**.cpp", "Source/**.hpp" }
+   files { "Source/**.h", "Source/**.cpp" }
 
    includedirs
    {

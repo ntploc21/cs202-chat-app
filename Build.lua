@@ -16,10 +16,7 @@ WalnutNetworkingBinDir = "Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNet
 include "Walnut/Build-Walnut-External.lua"
 
 group "Loc-ChatApp"
-	include "App-Common/Build-App-Common.lua"
-	include "App-Client/Build-App-Client.lua"
-	include "App-Server/Build-App-Server.lua"
-	include "User/Build-User.lua"
-	include "Authentication/Build-Authentication.lua"
-   include "App-Utils/Build-App-Utils.lua"
+    include "App-Common/Build-App-Common.lua"
+    include "App-Client/Build-App-Client.lua"
+    include "App-Server/Build-App-Server.lua"
 group ""

@@ -5,13 +5,11 @@ project "App-Client"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "src/**.h", "src/**.cpp", "Source/**.hpp" }
+   files { "src/**.h", "src/**.cpp" }
 
    includedirs
    {
-	   "../User/Source",
       "../App-Common/Source",
-      "../Authentication/Source",
 
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
@@ -31,11 +29,9 @@ project "App-Client"
 
    links
    {
-      "App-Common",
-	   "User",
-      "Authentication",
+       "App-Common",
 
-      "yaml-cpp",
+       "yaml-cpp",
    }
 
    	defines
