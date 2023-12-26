@@ -1,17 +1,17 @@
-project "Message"
+project "Last-Online"
    kind "StaticLib"
    language "C++"
    cppdialect "C++20"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "Source/**.cpp", "Source/**.hpp" }
+   files { "Source/**.h", "Source/**.cpp", "Source/**.hpp" }
 
    includedirs
    {
       "../App-Common/Source",
       "../User/Source",
-
+      
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
       "../Walnut/vendor/glm",

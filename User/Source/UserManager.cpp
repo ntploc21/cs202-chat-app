@@ -37,12 +37,10 @@ bool UserManager::update_user(User user) {
     return false;
 }
 
-User UserManager::get_user(int user_id) {
+std::optional< User > UserManager::get_user(int user_id) {
     int pos = findById(user_id);
-    if (pos != -1) {
-        return m_users[pos];
-    }
-    return User();
+    if (pos != -1) return m_users[pos];
+    return std::nullopt;
 }
 
 std::vector< User > UserManager::filter(
@@ -62,6 +60,18 @@ std::optional< User > UserManager::findByUsernameAndPassword(
     }
 
     return std::nullopt;
+}
+
+bool UserManager::exists(std::string_view username) {
+    int pos = findByUsername(username);
+	if (pos != -1) return true;
+	return false;
+}
+
+bool UserManager::exists(int user_id) {
+    int pos = findById(user_id);
+	if (pos != -1) return true;
+	return false;
 }
 
 std::vector< User > UserManager::get_users() { return m_users; }

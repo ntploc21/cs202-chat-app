@@ -42,6 +42,8 @@ public:
     static void Deserialize(Walnut::StreamReader* deserializer,
                             User& instance);
 
+public:
+
     int m_user_id{};
     std::string m_username{};
     std::string m_password{};
