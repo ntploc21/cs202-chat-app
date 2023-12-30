@@ -1,4 +1,5 @@
 #include "GroupMessage.hpp"
+
 #include "ConversationManager.hpp"
 
 GroupMessage::GroupMessage() {}
@@ -197,7 +198,14 @@ void GroupMessage::Serialize(Walnut::StreamWriter* serializer,
     serializer->WriteString(instance.m_group_name);
     serializer->WriteArray(instance.m_member_list);
     serializer->WriteArray(instance.m_admin_list);
-    serializer->WriteMap(instance.m_nickname_list);
+
+    serializer->WriteRaw< uint32_t >(instance.m_nickname_list.size());
+
+    for (auto& [key, value] : instance.m_nickname_list) {
+        serializer->WriteRaw< int >(key);
+        serializer->WriteString(value);
+    }
+
     serializer->WriteArray(instance.m_pin_message_list);
 }
 
@@ -208,23 +216,35 @@ void GroupMessage::Deserialize(Walnut::StreamReader* deserializer,
     deserializer->ReadString(instance.m_group_name);
     deserializer->ReadArray(instance.m_member_list);
     deserializer->ReadArray(instance.m_admin_list);
-    deserializer->ReadMap(instance.m_nickname_list);
+
+    uint32_t size;
+    deserializer->ReadRaw< uint32_t >(size);
+
+    for (int i = 0; i < size; i++) {
+        int key;
+        std::string value;
+        deserializer->ReadRaw< int >(key);
+        deserializer->ReadString(value);
+        instance.m_nickname_list[key] = value;
+    }
+
     deserializer->ReadArray(instance.m_pin_message_list);
 }
 
 std::optional< Message > GroupMessage::send_message(int sender_id,
-    													Message message) const {
-	if (!is_member(sender_id)) return std::nullopt;
-    auto msg = ConversationManager::getInstance().send_message(sender_id, m_conversation_id, message);
+                                                    Message message) const {
+    if (!is_member(sender_id)) return std::nullopt;
+    auto msg = ConversationManager::getInstance().send_message(
+        sender_id, m_conversation_id, message);
 
     return msg;
-
 }
 
 std::optional< Message > GroupMessage::send_message(int sender_id,
-    														std::string message) const {
-	if (!is_member(sender_id)) return std::nullopt;
-	auto msg = ConversationManager::getInstance().send_message(sender_id, m_conversation_id, message);
+                                                    std::string message) const {
+    if (!is_member(sender_id)) return std::nullopt;
+    auto msg = ConversationManager::getInstance().send_message(
+        sender_id, m_conversation_id, message);
 
-	return msg;
+    return msg;
 }

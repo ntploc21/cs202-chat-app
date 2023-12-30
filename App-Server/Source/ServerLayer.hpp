@@ -25,8 +25,8 @@ private:
     // bool LoadMessageHistoryFromFile(const std::filesystem::path& filepath);
     
     /* Utils */
-    void SendError(const Walnut::ClientInfo& client, PacketType packet_type, std::string_view error_msg);
-    void SendClientConnectionSuccess(const Walnut::ClientInfo& client, PacketType packet_type, Session session);
+    /*void SendError(const Walnut::ClientInfo& client, PacketType packet_type, std::string_view error_msg);
+    void SendClientConnectionSuccess(const Walnut::ClientInfo& client, PacketType packet_type, Session session);*/
 private:
     std::shared_ptr< Walnut::Server > m_server{};
 

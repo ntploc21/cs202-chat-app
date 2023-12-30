@@ -80,8 +80,8 @@ void ServerLayer::OnClientDisconnected(const Walnut::ClientInfo& client) {
 
 void ServerLayer::OnDataReceived(const Walnut::ClientInfo& client_info,
                                  const Walnut::Buffer buffer) {
-    // ...
-    Walnut::BufferStreamReader stream(buffer);
+    m_server_controller.handlePacket(client_info, buffer);
+    /*Walnut::BufferStreamReader stream(buffer);
 
     PacketType type;
     bool success = stream.ReadRaw< PacketType >(type);
@@ -151,10 +151,10 @@ void ServerLayer::OnDataReceived(const Walnut::ClientInfo& client_info,
 
             break;
         }
-    }
+    }*/
 }
 
-void ServerLayer::SendError(const Walnut::ClientInfo& client,
+/*void ServerLayer::SendError(const Walnut::ClientInfo& client,
                             PacketType packet_type,
                             std::string_view error_msg) {
     Walnut::BufferStreamWriter stream(m_scratch_buffer);
@@ -173,7 +173,7 @@ void ServerLayer::SendClientConnectionSuccess(const Walnut::ClientInfo& client,
     Walnut::BufferStreamWriter stream(m_scratch_buffer);
     stream.WriteRaw< PacketType >(packet_type);
     stream.WriteRaw< bool >(true);
-    stream.WriteRaw< Session >(session);
+    stream.WriteObject(session);
 
     m_server->SendBufferToClient(
         client.ID,
@@ -181,4 +181,4 @@ void ServerLayer::SendClientConnectionSuccess(const Walnut::ClientInfo& client,
 
     m_console.AddItalicMessage("Info", "Client {} connected",
                                client.ConnectionDesc);
-}
+}*/

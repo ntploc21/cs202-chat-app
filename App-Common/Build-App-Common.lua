@@ -19,7 +19,9 @@ project "App-Common"
       "%{IncludeDir.VulkanSDK}",
       "../Walnut/vendor/spdlog/include",
 
-      "../Walnut-Networking/vendor/GameNetworkingSockets/include"
+      -- Walnut-Networking
+      "../Walnut/Walnut-Modules/Walnut-Networking/Source",
+      "../Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/include"
    }
 
    links
