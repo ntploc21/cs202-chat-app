@@ -41,7 +41,7 @@ private:
 
     // Friends UI
     void UI_Friends();
-    void UI_FriendsList();
+    void UI_FriendList();
     void UI_Groups();
     void UI_FriendsRequest();
 

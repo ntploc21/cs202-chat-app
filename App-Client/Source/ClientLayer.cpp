@@ -51,7 +51,7 @@ void ClientLayer::OnUIRender() {
     }
 
     if (m_current_tab == Tab::Settings) {
-        ImGui::Text("Settings");
+        //ImGui::Text("Settings");
     }
 }
 
@@ -293,6 +293,51 @@ void ClientLayer::UI_MainTab() {
     ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
     ImGui::PopStyleVar(2);
 
+    ImGui::SameLine();
+
+    // edit the opacity of the avatar selectable
+
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered,
+                          ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive,
+                          ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() - 56);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12.0f);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+    if (ImGui::Selectable("##avatar", false, ImGuiSelectableFlags_None,
+                          ImVec2(50, 50))) {
+        ImGui::OpenPopup("##Info");
+    }
+
+    ImGui::PopStyleVar(2);
+
+    ImGui::PopStyleColor(3);
+
+    if (ImGui::BeginPopup("##Info")) {
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text("Nguyen Van A");
+
+        ImGui::PopFont();
+
+        ImGui::Separator();
+
+        ImGui::Selectable("Profile", false, ImGuiSelectableFlags_None,
+                          ImVec2(200, 0));
+
+        ImGui::Selectable("Logout", false, ImGuiSelectableFlags_None,
+                          ImVec2(200, 0));
+
+        ImGui::EndPopup();
+    }
+
     ImGui::PushFont(Walnut::Application::GetFont("FontAwesomeBig"));
 
     // center the icon in the selectable
@@ -302,18 +347,18 @@ void ClientLayer::UI_MainTab() {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
     // center the icon vertically in the selectable
 
-    if(ImGui::Selectable(ICON_FA_COMMENT, (m_current_tab == Tab::Chat), ImGuiSelectableFlags_None,
-                      ImVec2(50, 50))) {
+    if (ImGui::Selectable(ICON_FA_COMMENT, (m_current_tab == Tab::Chat),
+                          ImGuiSelectableFlags_None, ImVec2(50, 50))) {
         m_current_tab = Tab::Chat;
     }
 
-    if(ImGui::Selectable(ICON_FA_ADDRESS_BOOK, (m_current_tab == Tab::Contact), ImGuiSelectableFlags_None,
-                      ImVec2(50, 50))) {
+    if (ImGui::Selectable(ICON_FA_ADDRESS_BOOK, (m_current_tab == Tab::Contact),
+                          ImGuiSelectableFlags_None, ImVec2(50, 50))) {
         m_current_tab = Tab::Contact;
     }
 
-    if(ImGui::Selectable(ICON_FA_COG, (m_current_tab == Tab::Settings), ImGuiSelectableFlags_None,
-                      ImVec2(50, 50))) {
+    if (ImGui::Selectable(ICON_FA_COG, (m_current_tab == Tab::Settings),
+                          ImGuiSelectableFlags_None, ImVec2(50, 50))) {
         m_current_tab = Tab::Settings;
     }
 
@@ -815,7 +860,7 @@ void ClientLayer::UI_Friends() {
 
     ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
     if (ImGui::BeginTabItem(ICON_FA_USER " Friends")) {
-        UI_FriendsList();
+        UI_FriendList();
 
         ImGui::EndTabItem();
     }
@@ -839,21 +884,10 @@ void ClientLayer::UI_Friends() {
     ImGui::End();
 }
 
-void ClientLayer::UI_FriendsList() {
-
-    // title
-
-    // ImGui::PushFont(Walnut::Application::GetFont("Bold"));
-
-    ImGui::Text(ICON_FA_ADDRESS_BOOK " Friends");
-    
+void ClientLayer::UI_FriendList() {
     ImGui::PopFont();
 
-    // ImGui::PopFont();
-
     ImGui::Separator();
-
-    // search
 
     static std::string search;
 
@@ -867,19 +901,443 @@ void ClientLayer::UI_FriendsList() {
 
     ImGui::SameLine();
 
-    // add a toggle button to sort by name (ascending or descending)
-    // also, add a filter button to filter by online, all
+    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+    ImGui::PushFont(Walnut::Application::GetFont("Default"));
 
-    
-    
-    
-    
+    static int selected_sort = 0;
+
+    const char* sort_options[] = {ICON_FA_ARROW_UP " Name (A-Z)",
+                                  ICON_FA_ARROW_DOWN " Name (Z-A)"};
+
+    if (ImGui::Button(sort_options[selected_sort])) {
+        ImGui::OpenPopup("Sort");
+    }
+
+    if (ImGui::BeginPopup("Sort")) {
+        for (int i = 0; i < IM_ARRAYSIZE(sort_options); i++) {
+            if (ImGui::Selectable(sort_options[i])) {
+                selected_sort = i;
+            }
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::SameLine();
+
+    static int selected_filter = 0;
+
+    const char* filter_options[] = {ICON_FA_FILTER " All",
+                                    ICON_FA_FILTER " Online"};
+
+    if (ImGui::Button((selected_filter == -1
+                           ? "None"
+                           : filter_options[selected_filter]))) {
+        ImGui::OpenPopup("Filter");
+    }
+
+    if (ImGui::BeginPopup("Filter")) {
+        for (int i = 0; i < IM_ARRAYSIZE(filter_options); i++) {
+            if (ImGui::Selectable(filter_options[i])) {
+                selected_filter = i;
+            }
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::PopFont();
+    ImGui::PopFont();
+
+    ImGui::Separator();
+
+    // list (group by first letter)
+
+    // Reserve enough left-over height for 1 separator + 1 input text
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
+    const float footer_height_to_reserve =
+        ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+    ImGui::BeginChild("Friends List", ImVec2(0, -footer_height_to_reserve),
+                      false, ImGuiWindowFlags_HorizontalScrollbar);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                        ImVec2(4, 1));  // Tighten spacing
+
+    const float TextPadding = 8.0f;
+
+    ImGui::SetCursorPosY(TextPadding);
+
+    ImGui::SetCursorPosX(TextPadding);
+
+    ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
+    ImGui::SameLine();
+
+    ImGui::BeginGroup();
+    ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+    ImGui::Text("Nguyen Van A");
+    ImGui::PopFont();
+
+    ImGui::SameLine();
+
+    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+    ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 50);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 5);
+
+    if (ImGui::Button(ICON_FA_ELLIPSIS_V)) {
+        ImGui::OpenPopup("##Friend Options");
+    }
+
+    ImGui::PopFont();
+
+    static int friend_option = 0;
+
+    const char* friend_options[] = {"Info", "Block", "Unfriend"};
+
+    if (ImGui::BeginPopup("##Friend Options")) {
+        for (int i = 0; i < IM_ARRAYSIZE(friend_options); i++) {
+            if (ImGui::Selectable(friend_options[i])) {
+                friend_option = i;
+            }
+            if (i < IM_ARRAYSIZE(friend_options) - 1) ImGui::Separator();
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+    ImGui::Separator();
+
+    ImGui::EndGroup();
+
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+
     ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
 }
 
-void ClientLayer::UI_Groups() {}
+void ClientLayer::UI_Groups() {
+    ImGui::PopFont();
 
-void ClientLayer::UI_FriendsRequest() {}
+    ImGui::Separator();
+
+    static std::string search;
+
+    ImGui::Text("Search");
+
+    ImGui::SameLine();
+
+    ImGui::SetNextItemWidth(180);
+
+    ImGui::InputText("##Search", &search);
+
+    ImGui::SameLine();
+
+    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+    ImGui::PushFont(Walnut::Application::GetFont("Default"));
+
+    static int selected_sort = 0;
+
+    const char* sort_options[] = {ICON_FA_ARROW_UP " Name (A-Z)",
+                                  ICON_FA_ARROW_DOWN " Name (Z-A)"};
+
+    if (ImGui::Button(sort_options[selected_sort])) {
+        ImGui::OpenPopup("Sort");
+    }
+
+    if (ImGui::BeginPopup("Sort")) {
+        for (int i = 0; i < IM_ARRAYSIZE(sort_options); i++) {
+            if (ImGui::Selectable(sort_options[i])) {
+                selected_sort = i;
+            }
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::SameLine();
+
+    static int selected_filter = 0;
+
+    const char* filter_options[] = {ICON_FA_FILTER " All",
+                                    ICON_FA_FILTER " Group that I am an admin"};
+
+    if (ImGui::Button((selected_filter == -1
+                           ? "None"
+                           : filter_options[selected_filter]))) {
+        ImGui::OpenPopup("Filter");
+    }
+
+    if (ImGui::BeginPopup("Filter")) {
+        for (int i = 0; i < IM_ARRAYSIZE(filter_options); i++) {
+            if (ImGui::Selectable(filter_options[i])) {
+                selected_filter = i;
+            }
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::PopFont();
+    ImGui::PopFont();
+
+    ImGui::Separator();
+
+    // list (group by first letter)
+
+    // Reserve enough left-over height for 1 separator + 1 input text
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
+    const float footer_height_to_reserve =
+        ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+    ImGui::BeginChild("Groups", ImVec2(0, -footer_height_to_reserve), false,
+                      ImGuiWindowFlags_HorizontalScrollbar);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                        ImVec2(4, 1));  // Tighten spacing
+
+    const float TextPadding = 8.0f;
+
+    ImGui::SetCursorPosY(TextPadding);
+
+    ImGui::SetCursorPosX(TextPadding);
+
+    ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
+    ImGui::SameLine();
+
+    ImGui::BeginGroup();
+    ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+    ImGui::Text("Nguyen Van A");
+    ImGui::PopFont();
+
+    ImGui::SameLine();
+
+    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+    ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 50);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 5);
+
+    if (ImGui::Button(ICON_FA_ELLIPSIS_V)) {
+        ImGui::OpenPopup("##Group Options");
+    }
+
+    ImGui::PopFont();
+
+    static int group_option = 0;
+
+    const char* group_options[] = {"Info", "Mute", "Leave Group"};
+
+    if (ImGui::BeginPopup("##Group Options")) {
+        for (int i = 0; i < IM_ARRAYSIZE(group_options); i++) {
+            if (ImGui::Selectable(group_options[i])) {
+                group_option = i;
+            }
+            if (i < IM_ARRAYSIZE(group_options) - 1) ImGui::Separator();
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+    ImGui::Separator();
+
+    ImGui::EndGroup();
+
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+
+    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+}
+
+void ClientLayer::UI_FriendsRequest() {
+    ImGui::PopFont();
+
+    // this tab will contain 3 collapsing headers (Friend requests, Suggestions,
+    // Add friends)
+
+    if (ImGui::CollapsingHeader("Friend requests")) {
+        // avatar + name + accept + decline
+
+        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text("Nguyen Van A");
+
+        ImGui::PopFont();
+
+        ImGui::Text("Hello, how are you?");
+
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+
+        // align the two buttons at the right
+
+        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 115);
+
+        ImGui::Button(ICON_FA_USER_CIRCLE);
+
+        ImGui::SameLine();
+
+        ImGui::Button(ICON_FA_CHECK);
+
+        ImGui::SameLine();
+
+        ImGui::Button(ICON_FA_TIMES);
+
+        ImGui::PopFont();
+
+        ImGui::Separator();
+    }
+
+    if (ImGui::CollapsingHeader("Suggestions")) {
+        // avatar + name + add friend
+
+        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text("Nguyen Van A");
+
+        ImGui::PopFont();
+
+        // text input to add note
+
+        std::string note;
+
+        ImGui::InputText("##note", &note);
+
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 80);
+
+        ImGui::Button(ICON_FA_USER_CIRCLE);
+
+        ImGui::SameLine();
+
+        ImGui::Button(ICON_FA_USER_PLUS);
+
+        ImGui::PopFont();
+
+        ImGui::Separator();
+    }
+
+    if (ImGui::CollapsingHeader("Add friends")) {
+        // display a search bar that you can use to search for friends
+        // when you enter a name, it will display a list of friends that match
+
+        // search bar
+
+        static std::string search;
+
+        ImGui::Text("Search");
+
+        ImGui::SameLine();
+
+        ImGui::SetNextItemWidth(180);
+
+        ImGui::InputText("##Search", &search);
+
+        ImGui::SameLine();
+
+        ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+
+        ImGui::Button(ICON_FA_SEARCH);
+
+        ImGui::PopFont();
+
+        ImGui::Separator();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
+        const float footer_height_to_reserve =
+            ImGui::GetStyle().ItemSpacing.y +
+            ImGui::GetFrameHeightWithSpacing();
+        ImGui::BeginChild("Friends List", ImVec2(0, -footer_height_to_reserve),
+                          false, ImGuiWindowFlags_HorizontalScrollbar);
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                            ImVec2(4, 1));  // Tighten spacing
+
+        const float TextPadding = 8.0f;
+
+        ImGui::SetCursorPosY(TextPadding);
+
+        ImGui::SetCursorPosX(TextPadding);
+
+        // list
+
+        // avatar + name + add friend
+
+        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+
+        ImGui::BeginGroup();
+
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text("Nguyen Van A");
+
+        ImGui::PopFont();
+
+        // text input to add note
+
+        std::string note;
+
+        ImGui::InputText("##note", &note);
+
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+
+        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 80);
+
+        ImGui::Button(ICON_FA_USER_CIRCLE);
+
+        ImGui::SameLine();
+
+        ImGui::Button(ICON_FA_USER_PLUS);
+
+        ImGui::PopFont();
+
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+        ImGui::Separator();
+
+        ImGui::EndGroup();
+
+        ImGui::PopStyleVar();
+        ImGui::EndChild();
+        ImGui::PopStyleVar();
+    }
+
+    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+}
 
 void ClientLayer::OnConnected() {}
 
