@@ -7,6 +7,8 @@
 #include "ServerPacket.hpp"
 #include "Session.hpp"
 
+#include "Walnut/Image.h"
+
 class ServerLayer : public Walnut::Layer {
 public:
     virtual void OnAttach() override;
@@ -36,4 +38,9 @@ private:
 
     ServerController m_server_controller{};
     std::map< Walnut::ClientID, Session > m_connected_clients{};
+
+    
+
+    std::shared_ptr< Walnut::Image > m_test_avt;
+
 };

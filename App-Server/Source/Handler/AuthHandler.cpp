@@ -23,9 +23,6 @@ void ClientRegisterHandler::handleImpl(const Walnut::ClientInfo& client_info,
     std::string password;
     std::string fullname;
 
-    
-
-
 
     if (!stream.ReadString(username) || !stream.ReadString(password) ||
         !stream.ReadString(fullname)) {

@@ -32,6 +32,10 @@ void ServerLayer::OnAttach() {
     m_server_controller = ServerController(m_server);
 
     m_console.AddTaggedMessage("Info", "Started server on port {}", port);
+
+    
+
+    m_test_avt = std::make_shared< Walnut::Image >("Image/test.png");
 }
 
 void ServerLayer::OnDetach() {
