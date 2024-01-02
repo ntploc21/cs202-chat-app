@@ -51,4 +51,6 @@ private:
 private:
     std::vector< User > m_users{};
     int m_next_id{0};
+
+    const std::string m_users_file{"users.yaml"};
 };

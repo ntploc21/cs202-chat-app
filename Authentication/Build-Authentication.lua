@@ -21,6 +21,7 @@ project "Authentication"
 
       "%{IncludeDir.VulkanSDK}",
       "../Walnut/vendor/spdlog/include",
+      "../Walnut/vendor/yaml-cpp/include",
 
       "../Walnut-Networking/vendor/GameNetworkingSockets/include"
    }
@@ -30,6 +31,12 @@ project "Authentication"
       "User",
        "Walnut",
        "Walnut-Networking",
+       "yaml-cpp",
+   }
+
+   defines
+   {
+       "YAML_CPP_STATIC_DEFINE"
    }
 
    targetdir ("../bin/" .. outputdir .. "/%{prj.name}")

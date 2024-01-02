@@ -2,6 +2,7 @@
 
 #include "ServerHandler.hpp"
 #include "ServerPacket.hpp"
+#include "User.hpp"
 
 class AuthHandler : public ServerHandler {
 public:
@@ -9,6 +10,7 @@ public:
 
 private:
     void handleImpl(const Walnut::ClientInfo& client_info,
+                    const PacketType packet_type,
                     Walnut::BufferStreamReader& stream) override;
 };
 
@@ -18,6 +20,7 @@ public:
 
 private:
     void handleImpl(const Walnut::ClientInfo& client_info,
+                    const PacketType packet_type,
                     Walnut::BufferStreamReader& stream) override;
 };
 
@@ -27,6 +30,7 @@ public:
 
 private:
     void handleImpl(const Walnut::ClientInfo& client_info,
+                    const PacketType packet_type,
                     Walnut::BufferStreamReader& stream) override;
 };
 
@@ -36,6 +40,7 @@ public:
 
 private:
     void handleImpl(const Walnut::ClientInfo& client_info,
+                    const PacketType packet_type,
                     Walnut::BufferStreamReader& stream) override;
 };
 
@@ -44,4 +49,4 @@ void SendError(std::shared_ptr< Walnut::Server > server,
                std::string_view error_msg);
 void SendClientConnectionSuccess(std::shared_ptr< Walnut::Server > server,
                                  const Walnut::ClientInfo& client,
-                                 PacketType packet_type, Session session);
+                                 PacketType packet_type, User user);

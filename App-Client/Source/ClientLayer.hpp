@@ -38,6 +38,7 @@ private:
     void UI_UserList();
     void UI_MainCenter();
     void UI_Info();
+    void UI_UserInfo(const User& user, bool self = false);
 
     // Friends UI
     void UI_Friends();
@@ -50,13 +51,21 @@ private:
     void OnDisconnected();
     void OnDataReceived(const Walnut::Buffer buffer);
 
+    // Save + Load credentials
+    void SaveCredentials();
+    void LoadCredentials();
+    void DeleteCredentials();
+
+    void ConnectToServer();
+    void LoginToServer();
+
 private:
     std::unique_ptr< Walnut::Client > m_client{};
     std::string m_server_ip{};
 
     Walnut::Buffer m_scratch_buffer{};
 
-    User current_user{};
+    User m_current_user{};
 
     bool m_connection_modal_open = false;
     bool m_login_modal_open = false;
@@ -64,12 +73,16 @@ private:
     bool m_logged_in = false;
     bool m_remember_me = false;
     
-    Tab m_current_tab = Tab::Chat;
+    Tab m_current_tab = Tab::Default;
     
     bool m_AutoScroll = true;
     bool m_ScrollToBottom = false;
 
     bool m_friends_filter = false;
+
+    bool m_view_profile = false;
+
+    bool m_has_credentials = false;
 
     using MessageSendCallback = std::function< void(std::string_view) >;
 
@@ -78,4 +91,6 @@ private:
     MessageSendCallback m_MessageSendCallback;
 
     std::shared_ptr< Walnut::Image > m_test_avt;
+
+    const std::string m_saved_credentials_file{"credentials.yaml"};
 };

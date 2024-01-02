@@ -1,9 +1,11 @@
 #include "AuthHandler.hpp"
+
 #include <iostream>
-#include "Walnut/Serialization/BufferStream.h"
-#include "UserManager.hpp"
+
 #include "../ClientManager.hpp"
 #include "Authenticator.hpp"
+#include "UserManager.hpp"
+#include "Walnut/Serialization/BufferStream.h"
 
 AuthHandler::AuthHandler() {}
 ClientRegisterHandler::ClientRegisterHandler() {}
@@ -11,23 +13,30 @@ ClientLoginHandler::ClientLoginHandler() {}
 ClientLogoutHandler::ClientLogoutHandler() {}
 
 void AuthHandler::handleImpl(const Walnut::ClientInfo& client_info,
+                             const PacketType packet_type,
                              Walnut::BufferStreamReader& stream) {
-    //std::cout << "AuthHandler::handleImpl" << std::endl;
+    // check if client is authenticated
+
+    auto& client = ClientManager::getInstance()[client_info.ID];
+
+    if (!Authenticator::getInstance().validate_session(
+            client.get_session_id())) {
+        SendError(m_server, client_info, packet_type,
+                  "Client is not authenticated!");
+        return;
+    }
 }
 
-
 void ClientRegisterHandler::handleImpl(const Walnut::ClientInfo& client_info,
+                                       const PacketType packet_type,
                                        Walnut::BufferStreamReader& stream) {
-
     std::string username;
     std::string password;
     std::string fullname;
 
-
     if (!stream.ReadString(username) || !stream.ReadString(password) ||
         !stream.ReadString(fullname)) {
-        SendError(m_server, 
-            client_info, PacketType::ClientRegisterRequest,
+        SendError(m_server, client_info, packet_type,
                   "Username, password and fullname must not be empty!");
         return;
     }
@@ -36,30 +45,29 @@ void ClientRegisterHandler::handleImpl(const Walnut::ClientInfo& client_info,
                                                                      password);
 
     if (user.has_value()) {
-        SendError(m_server, client_info, PacketType::ClientRegisterRequest,
-                  "User already exists");
+        SendError(m_server, client_info, packet_type, "User already exists");
     } else {
         User new_user(username, password, fullname);
         int user_id = UserManager::getInstance().add_user(new_user);
 
+        new_user = UserManager::getInstance().get_user(user_id).value();
+
         auto& client = ClientManager::getInstance()[client_info.ID];
         client = Authenticator::getInstance().add_session(user_id);
 
-        SendClientConnectionSuccess(m_server, client_info,
-                                    PacketType::ClientRegisterRequest, client);
+        SendClientConnectionSuccess(m_server, client_info, packet_type, new_user);
     }
 }
 
-
 void ClientLoginHandler::handleImpl(const Walnut::ClientInfo& client_info,
+                                    const PacketType packet_type,
                                     Walnut::BufferStreamReader& stream) {
-
     std::string username_login;
     std::string password_login;
 
     if (!stream.ReadString(username_login) ||
         !stream.ReadString(password_login)) {
-        SendError(m_server, client_info, PacketType::ClientLoginRequest,
+        SendError(m_server, client_info, packet_type,
                   "Username and password must not be empty!");
         return;
     }
@@ -72,22 +80,31 @@ void ClientLoginHandler::handleImpl(const Walnut::ClientInfo& client_info,
         auto& client = ClientManager::getInstance()[client_info.ID];
         client = Authenticator::getInstance().add_session(user_id);
 
-        SendClientConnectionSuccess(m_server, client_info, PacketType::ClientLoginRequest,
-                                    client);
+        SendClientConnectionSuccess(m_server, client_info, packet_type,
+                                    user_login.value());
     } else {
-        SendError(m_server, client_info, PacketType::ClientLoginRequest,
+        SendError(m_server, client_info, packet_type,
                   "Login credentials incorrect!");
     }
 }
 
-
 void ClientLogoutHandler::handleImpl(const Walnut::ClientInfo& client_info,
-                                     Walnut::BufferStreamReader& stream) {}
+                                     const PacketType packet_type,
+                                     Walnut::BufferStreamReader& stream) {
+    Walnut::Buffer scratch_buffer{};
+    scratch_buffer.Allocate(1024);
 
-void SendError(std::shared_ptr<Walnut::Server> server, const Walnut::ClientInfo& client,
-                            PacketType packet_type,
-                            std::string_view error_msg) {
+    Walnut::BufferStreamWriter out_stream(scratch_buffer);
+    out_stream.WriteRaw< PacketType >(packet_type);
+    out_stream.WriteRaw< bool >(true);
 
+    m_server->SendBufferToClient(
+        client_info.ID, Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
+}
+
+void SendError(std::shared_ptr< Walnut::Server > server,
+               const Walnut::ClientInfo& client, PacketType packet_type,
+               std::string_view error_msg) {
     Walnut::Buffer scratch_buffer{};
     scratch_buffer.Allocate(1024);
 
@@ -97,27 +114,23 @@ void SendError(std::shared_ptr<Walnut::Server> server, const Walnut::ClientInfo&
     stream.WriteString(error_msg);
 
     server->SendBufferToClient(
-        client.ID,
-        Walnut::Buffer(scratch_buffer, stream.GetStreamPosition()));
+        client.ID, Walnut::Buffer(scratch_buffer, stream.GetStreamPosition()));
 }
 
 void SendClientConnectionSuccess(std::shared_ptr< Walnut::Server > server,
-                                 const
-                                     Walnut::ClientInfo& client,
-                                              PacketType packet_type,
-                                              Session session) {
+                                 const Walnut::ClientInfo& client,
+                                 PacketType packet_type, User user) {
     Walnut::Buffer scratch_buffer{};
     scratch_buffer.Allocate(1024);
-    
+
     Walnut::BufferStreamWriter stream(scratch_buffer);
     stream.WriteRaw< PacketType >(packet_type);
     stream.WriteRaw< bool >(true);
-    stream.WriteObject(session);
+    stream.WriteObject(user);
 
     server->SendBufferToClient(
-        client.ID,
-        Walnut::Buffer(scratch_buffer, stream.GetStreamPosition()));
+        client.ID, Walnut::Buffer(scratch_buffer, stream.GetStreamPosition()));
 
-    //console.AddItalicMessage("Info", "Client {} connected",
-    //                           client.ConnectionDesc);
+    // console.AddItalicMessage("Info", "Client {} connected",
+    //                            client.ConnectionDesc);
 }

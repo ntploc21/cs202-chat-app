@@ -1,14 +1,13 @@
 #include "ClientLayer.hpp"
-#include "Walnut/ApplicationGUI.h"
+#include "Walnut/Application.h"
 #include "Walnut/EntryPoint.h"
-#include "IconsFontAwesome5.h"
 
 Walnut::Application* Walnut::CreateApplication(int argc, char** argv) {
     Walnut::ApplicationSpecification spec;
     spec.Name = "Loc Chat";
-    spec.IconPath = "Image/test.png";
-    spec.CustomTitlebar = true;
-    spec.CenterWindow = true;
+    //spec.IconPath = "Image/test.png";
+    //spec.CustomTitlebar = true;
+    //spec.CenterWindow = true;
 
     Walnut::Application* app = new Walnut::Application(spec);
 

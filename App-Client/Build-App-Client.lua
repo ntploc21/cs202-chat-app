@@ -27,7 +27,9 @@ project "App-Client"
       
       -- Walnut-Networking
       "../Walnut/Walnut-Modules/Walnut-Networking/Source",
-      "../Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/include"
+      "../Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/include",
+
+      "../date/include/",
    }
 
    links
@@ -38,6 +40,7 @@ project "App-Client"
       "Message",
 
       "yaml-cpp",
+      -- "date",
    }
 
    	defines

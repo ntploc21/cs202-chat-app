@@ -3,6 +3,7 @@
 #include <imgui.h>
 
 #include <iostream>
+#include <filesystem>
 
 #include "IconsFontAwesome5.h"
 #include "ServerPacket.hpp"
@@ -15,8 +16,10 @@
 #include "Walnut/Utils/StringUtils.h"
 #include "misc/cpp/imgui_stdlib.h"
 
+#include "yaml-cpp/yaml.h"
+
 void ClientLayer::OnAttach() {
-    m_scratch_buffer.Allocate(8192);
+    m_scratch_buffer.Allocate(1024);
 
     m_client = std::make_unique< Walnut::Client >();
     m_client->SetServerConnectedCallback([this]() { OnConnected(); });
@@ -27,6 +30,8 @@ void ClientLayer::OnAttach() {
     // ImGui::StyleColorsLight();
 
     m_test_avt = std::make_shared< Walnut::Image >("Image/test.png");
+
+    LoadCredentials();
 }
 
 void ClientLayer::OnDetach() {
@@ -42,6 +47,8 @@ void ClientLayer::OnUIRender() {
         UI_Register();
     }
 
+    if(!m_logged_in) return;
+
     if (m_current_tab == Tab::Chat) {
         UI_MainChat();
     }
@@ -51,7 +58,7 @@ void ClientLayer::OnUIRender() {
     }
 
     if (m_current_tab == Tab::Settings) {
-        //ImGui::Text("Settings");
+        // ImGui::Text("Settings");
     }
 }
 
@@ -64,8 +71,14 @@ void ClientLayer::OnDisconnectButton() { m_client->Disconnect(); }
 
 void ClientLayer::UI_ConnectionModal() {
     if (m_client->GetConnectionStatus() ==
-        Walnut::Client::ConnectionStatus::Connected)
+        Walnut::Client::ConnectionStatus::Connected) {
+        if (m_has_credentials) {
+            LoginToServer();
+            m_has_credentials = false;
+        }
+
         return;
+    }
 
     if (!m_connection_modal_open) {
         ImGui::OpenPopup("Connect to server");
@@ -78,26 +91,7 @@ void ClientLayer::UI_ConnectionModal() {
         ImGui::InputText("##address", &m_server_ip);
         ImGui::SameLine();
         if (ImGui::Button("Connect")) {
-            if (Walnut::Utils::IsValidIPAddress(m_server_ip)) {
-                m_client->ConnectToServer(m_server_ip);
-            } else {
-                // Try resolve domain name
-                auto ipTokens = Walnut::Utils::SplitString(
-                    m_server_ip,
-                    ':');  // [0] == hostname, [1] (optional) == port
-                std::string serverIP =
-                    Walnut::Utils::ResolveDomainName(ipTokens[0]);
-                if (ipTokens.size() != 2)
-                    serverIP =
-                        fmt::format("{}:{}", serverIP,
-                                    8192);  // Add default port if hostname
-                                            // doesn't contain port
-                else
-                    serverIP = fmt::format("{}:{}", serverIP,
-                                           ipTokens[1]);  // Add specified port
-
-                m_client->ConnectToServer(serverIP);
-            }
+            ConnectToServer();
         }
 
         if (Walnut::UI::ButtonCentered("Quit"))
@@ -107,6 +101,7 @@ void ClientLayer::UI_ConnectionModal() {
             Walnut::Client::ConnectionStatus::Connected) {
             // Wait for response
             ImGui::CloseCurrentPopup();
+
         } else if (m_client->GetConnectionStatus() ==
                    Walnut::Client::ConnectionStatus::FailedToConnect) {
             ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.1f, 1.0f),
@@ -143,10 +138,10 @@ void ClientLayer::UI_Login() {
                                     ImGuiTreeNodeFlags_None)) {
         }
         ImGui::Text("Username");
-        ImGui::InputText("##username", &current_user.m_username);
+        ImGui::InputText("##username", &m_current_user.m_username);
 
         ImGui::Text("Password");
-        ImGui::InputText("##password", &current_user.m_password,
+        ImGui::InputText("##password", &m_current_user.m_password,
                          ImGuiInputTextFlags_Password);
 
         ImGui::Checkbox("Remember me", &m_remember_me);
@@ -170,16 +165,7 @@ void ClientLayer::UI_Login() {
         float off = (avail - actualSize) * 0.5f;
         if (off > 0.0f) ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
 
-        if (ImGui::Button("Sign in")) {
-            Walnut::BufferStreamWriter stream(m_scratch_buffer);
-            stream.WriteRaw< PacketType >(PacketType::ClientLoginRequest);
-            stream.WriteString(current_user.m_username);
-            stream.WriteString(current_user.m_password);
-
-            m_client->SendBuffer(stream.GetBuffer());
-
-            ImGui::CloseCurrentPopup();
-        }
+        if (ImGui::Button("Sign in")) LoginToServer();
 
         ImGui::SameLine();
 
@@ -213,13 +199,13 @@ void ClientLayer::UI_Register() {
                                     ImGuiTreeNodeFlags_None)) {
         }
         ImGui::Text("Fullname");
-        ImGui::InputText("##fullname", &current_user.m_fullname);
+        ImGui::InputText("##fullname", &m_current_user.m_fullname);
 
         ImGui::Text("Username");
-        ImGui::InputText("##username", &current_user.m_username);
+        ImGui::InputText("##username", &m_current_user.m_username);
 
         ImGui::Text("Password");
-        ImGui::InputText("##password", &current_user.m_password,
+        ImGui::InputText("##password", &m_current_user.m_password,
                          ImGuiInputTextFlags_Password);
 
         ImGui::Checkbox("Remember me", &m_remember_me);
@@ -246,9 +232,9 @@ void ClientLayer::UI_Register() {
         if (ImGui::Button("Sign up")) {
             Walnut::BufferStreamWriter stream(m_scratch_buffer);
             stream.WriteRaw< PacketType >(PacketType::ClientRegisterRequest);
-            stream.WriteString(current_user.m_username);
-            stream.WriteString(current_user.m_password);
-            stream.WriteString(current_user.m_fullname);
+            stream.WriteString(m_current_user.m_username);
+            stream.WriteString(m_current_user.m_password);
+            stream.WriteString(m_current_user.m_fullname);
 
             m_client->SendBuffer(stream.GetBuffer());
 
@@ -323,17 +309,45 @@ void ClientLayer::UI_MainTab() {
     if (ImGui::BeginPopup("##Info")) {
         ImGui::PushFont(Walnut::Application::GetFont("Bold"));
 
-        ImGui::Text("Nguyen Van A");
+        ImGui::Text(m_current_user.get_fullname().c_str());
 
         ImGui::PopFont();
 
         ImGui::Separator();
 
-        ImGui::Selectable("Profile", false, ImGuiSelectableFlags_None,
-                          ImVec2(200, 0));
+        if (ImGui::Selectable("Profile", false, ImGuiSelectableFlags_None,
+                              ImVec2(200, 0))) {
+            // open profile modal
+            m_view_profile = true;
+        }
 
-        ImGui::Selectable("Logout", false, ImGuiSelectableFlags_None,
-                          ImVec2(200, 0));
+        if (ImGui::Selectable("Logout", false, ImGuiSelectableFlags_None,
+                              ImVec2(200, 0))) {
+            Walnut::BufferStreamWriter stream(m_scratch_buffer);
+            stream.WriteRaw< PacketType >(PacketType::ClientLogoutRequest);
+
+            m_client->SendBuffer(stream.GetBuffer());
+        }
+
+        ImGui::EndPopup();
+    }
+
+    if (m_view_profile) {
+        ImGui::OpenPopup("Profile");
+        m_view_profile = false;
+    }
+
+    if (ImGui::BeginPopupModal("Profile", nullptr, ImGuiWindowFlags_MenuBar)) {
+        UI_UserInfo(m_current_user, true);
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
+
+        if (ImGui::Button(ICON_FA_SIGN_OUT_ALT "Close"))
+            ImGui::CloseCurrentPopup();
+
+        ImGui::PopStyleVar(2);
 
         ImGui::EndPopup();
     }
@@ -845,6 +859,63 @@ void ClientLayer::UI_Info() {
     ImGui::End();
 }
 
+void ClientLayer::UI_UserInfo(const User& user, bool self) {
+    if (self) {
+        // display the avatar at the center
+        // followed by the name
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+        // center the avatar
+        ImGui::SetCursorPosX((ImGui::GetWindowSize().x - 100) * 0.5f);
+
+        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(100, 100));
+
+        ImGui::PopStyleVar(2);
+
+        // center the name
+        std::string name = m_current_user.get_fullname();
+        ImGui::SetCursorPosX(
+            (ImGui::GetWindowSize().x - ImGui::CalcTextSize(name.c_str()).x) *
+            0.5f);
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text(name.c_str());
+
+        ImGui::PopFont();
+
+        ImGui::Separator();
+
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text("Info");
+
+        ImGui::PopFont();
+
+        ImGui::Text((name + "(@" + m_current_user.get_username() + ")").c_str());
+
+        int no_of_friends = m_current_user.m_friend_list.size();
+        ImGui::Text(("Number of friends: " + std::to_string(no_of_friends)).c_str());
+
+        ImGui::Separator();
+
+        // draw edit button that spans the whole width
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
+
+        ImGui::SetCursorPosX((ImGui::GetWindowSize().x - 160) * 0.5f);
+
+        ImGui::Button(ICON_FA_EDIT " Edit");
+
+        ImGui::SameLine();
+
+        ImGui::PopStyleVar(2);
+    }
+}
+
 void ClientLayer::UI_Friends() {
     UI_MainTab();
 
@@ -1349,10 +1420,11 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
     PacketType type;
     stream.ReadRaw< PacketType >(type);
 
+    bool success;
+
     switch (type) {
         case PacketType::ClientRegisterRequest:
         case PacketType::ClientLoginRequest:
-            bool success;
             stream.ReadRaw< bool >(success);
 
             if (!success) {
@@ -1360,16 +1432,127 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
                 stream.ReadString(error_msg);
 
                 std::cout << error_msg << std::endl;
-            } else {
-                Session session;
-                stream.ReadObject(session);
 
-                std::cout << "Register success" << std::endl;
-                std::cout << "Session id: " << session.get_session_id()
-                          << std::endl;
-                std::cout << "Session user id: " << session.get_user_id()
-                          << std::endl;
+                break;
             }
+
+            std::cout << "hello" << std::endl;
+
+            stream.ReadObject(m_current_user);
+
+            m_current_tab = Tab::Chat;
+
+            m_logged_in = true;
+
+            if(m_remember_me) SaveCredentials();
+            else DeleteCredentials();
+            
+            break;
+        case PacketType::ClientLogoutRequest:
+
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+            m_logged_in = false;
+
+            m_current_tab = Tab::Default;
+            
+            DeleteCredentials();
+
+            std::cout << "Logout success" << std::endl;
+
             break;
     }
+}
+
+void ClientLayer::SaveCredentials() {
+    YAML::Emitter out;
+
+    out << YAML::BeginMap;
+
+    out << YAML::Key << "server_ip" << YAML::Value << m_server_ip;
+
+    out << YAML::Key << "username" << YAML::Value
+		<< m_current_user.get_username();
+
+    out << YAML::Key << "password" << YAML::Value
+        << m_current_user.get_password();
+
+    out << YAML::EndMap;
+
+    std::ofstream fout(m_saved_credentials_file);
+
+    fout << out.c_str();
+
+    fout.close();
+}
+
+void ClientLayer::LoadCredentials() {
+    std::ifstream fin(m_saved_credentials_file);
+
+    if (!fin.is_open()) return;
+
+    YAML::Node doc = YAML::Load(fin);
+
+    m_server_ip = doc["server_ip"].as< std::string >();
+	std::string username = doc["username"].as< std::string >();
+    std::string password = doc["password"].as< std::string >();
+
+	m_current_user.set_username(username);
+	m_current_user.set_password(password);
+    
+	fin.close();
+
+    ConnectToServer();
+    m_has_credentials = true;
+    m_remember_me = true;
+}
+
+void ClientLayer::DeleteCredentials() {
+    try {
+        std::filesystem::remove(m_saved_credentials_file);
+    } catch (std::filesystem::filesystem_error& e) {
+    	// std::cout << e.what() << std::endl;
+    }
+}
+
+void ClientLayer::ConnectToServer() {
+    if (Walnut::Utils::IsValidIPAddress(m_server_ip)) {
+        m_client->ConnectToServer(m_server_ip);
+    } else {
+        // Try resolve domain name
+        auto ipTokens = Walnut::Utils::SplitString(
+            m_server_ip,
+            ':');  // [0] == hostname, [1] (optional) == port
+        std::string serverIP = Walnut::Utils::ResolveDomainName(ipTokens[0]);
+        if (ipTokens.size() != 2)
+            serverIP = fmt::format("{}:{}", serverIP,
+                                   8192);  // Add default port if hostname
+                                           // doesn't contain port
+        else
+            serverIP = fmt::format("{}:{}", serverIP,
+                                   ipTokens[1]);  // Add specified port
+
+        m_client->ConnectToServer(serverIP);
+    }
+}
+
+void ClientLayer::LoginToServer() {
+    Walnut::BufferStreamWriter stream(m_scratch_buffer);
+    stream.WriteRaw< PacketType >(PacketType::ClientLoginRequest);
+    stream.WriteString(m_current_user.m_username);
+    stream.WriteString(m_current_user.m_password);
+
+    m_client->SendBuffer(stream.GetBuffer());
+
+    std::cout << "hehe" << std::endl;
+
+    ImGui::CloseCurrentPopup();
 }

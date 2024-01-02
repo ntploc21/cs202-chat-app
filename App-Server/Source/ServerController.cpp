@@ -17,7 +17,7 @@ void ServerController::constructHandlers() {
     m_packet_handlers[PacketType::ClientRegisterRequest] = {
         Handler::ID::ClientRegister};
     m_packet_handlers[PacketType::ClientLogoutRequest] = {
-        Handler::ID::ClientLogout};
+        Handler::ID::Authenticate, Handler::ID::ClientLogout};
 }
 
 void ServerController::handlePacket(const Walnut::ClientInfo& client_info,
@@ -51,5 +51,5 @@ void ServerController::executeHandlers(const Walnut::ClientInfo& client_info,
         handlers.push_back(std::unique_ptr< ServerHandler >(handler_tmp));
     }
 
-    if (handler != nullptr) handler->handle(client_info, stream);
+    if (handler != nullptr) handler->handle(client_info, packet_type, stream);
 }

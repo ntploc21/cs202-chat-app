@@ -3,9 +3,10 @@
 ServerHandler::ServerHandler() : m_next(nullptr), m_server(nullptr) {}
 
 void ServerHandler::handle(const Walnut::ClientInfo& client_info,
+                            const PacketType packet_type,
                            Walnut::BufferStreamReader& stream) {
-    handleImpl(client_info, stream);
-    if (m_next) m_next->handle(client_info, stream);
+    handleImpl(client_info, packet_type, stream);
+    if (m_next) m_next->handle(client_info, packet_type, stream);
 }
 
 void ServerHandler::setNext(ServerHandler* next) {

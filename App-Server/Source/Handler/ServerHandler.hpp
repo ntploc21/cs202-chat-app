@@ -3,6 +3,7 @@
 #include "Session.hpp"
 #include "Walnut/Networking/Server.h"
 #include "Walnut/Serialization/BufferStream.h"
+#include "ServerPacket.hpp"
 
 namespace Handler {
     enum class ID {
@@ -21,6 +22,7 @@ public:
 
 public:
     virtual void handle(const Walnut::ClientInfo& client_info,
+                        const PacketType packet_type,
                         Walnut::BufferStreamReader& stream);
 
     virtual ~ServerHandler() = default;
@@ -31,6 +33,7 @@ public:
 
 protected:
     virtual void handleImpl(const Walnut::ClientInfo& client_info,
+                            const PacketType packet_type,
                             Walnut::BufferStreamReader& stream) = 0;
     ServerHandler* m_next;
     std::shared_ptr< Walnut::Server > m_server;
