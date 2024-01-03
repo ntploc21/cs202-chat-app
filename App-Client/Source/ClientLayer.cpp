@@ -2,8 +2,8 @@
 
 #include <imgui.h>
 
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 
 #include "IconsFontAwesome5.h"
 #include "ServerPacket.hpp"
@@ -15,11 +15,10 @@
 #include "Walnut/UI/UI.h"
 #include "Walnut/Utils/StringUtils.h"
 #include "misc/cpp/imgui_stdlib.h"
-
 #include "yaml-cpp/yaml.h"
 
 void ClientLayer::OnAttach() {
-    m_scratch_buffer.Allocate(1024);
+    m_scratch_buffer.Allocate(8192);
 
     m_client = std::make_unique< Walnut::Client >();
     m_client->SetServerConnectedCallback([this]() { OnConnected(); });
@@ -47,7 +46,10 @@ void ClientLayer::OnUIRender() {
         UI_Register();
     }
 
-    if(!m_logged_in) return;
+    if (!m_logged_in || !IsConnected()) {
+        m_current_tab = Tab::Default;
+        return;
+    }
 
     if (m_current_tab == Tab::Chat) {
         UI_MainChat();
@@ -59,6 +61,26 @@ void ClientLayer::OnUIRender() {
 
     if (m_current_tab == Tab::Settings) {
         // ImGui::Text("Settings");
+    }
+
+    if (m_view_profile) {
+        ImGui::OpenPopup("Profile");
+        m_view_profile = false;
+    }
+
+    if (ImGui::BeginPopupModal("Profile", nullptr, ImGuiWindowFlags_MenuBar)) {
+        UI_UserInfo();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
+
+        if (ImGui::Button(ICON_FA_SIGN_OUT_ALT "Close"))
+            ImGui::CloseCurrentPopup();
+
+        ImGui::PopStyleVar(2);
+
+        ImGui::EndPopup();
     }
 }
 
@@ -318,6 +340,7 @@ void ClientLayer::UI_MainTab() {
         if (ImGui::Selectable("Profile", false, ImGuiSelectableFlags_None,
                               ImVec2(200, 0))) {
             // open profile modal
+            m_profile_user = m_current_user;
             m_view_profile = true;
         }
 
@@ -328,26 +351,6 @@ void ClientLayer::UI_MainTab() {
 
             m_client->SendBuffer(stream.GetBuffer());
         }
-
-        ImGui::EndPopup();
-    }
-
-    if (m_view_profile) {
-        ImGui::OpenPopup("Profile");
-        m_view_profile = false;
-    }
-
-    if (ImGui::BeginPopupModal("Profile", nullptr, ImGuiWindowFlags_MenuBar)) {
-        UI_UserInfo(m_current_user, true);
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
-
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
-
-        if (ImGui::Button(ICON_FA_SIGN_OUT_ALT "Close"))
-            ImGui::CloseCurrentPopup();
-
-        ImGui::PopStyleVar(2);
 
         ImGui::EndPopup();
     }
@@ -859,11 +862,9 @@ void ClientLayer::UI_Info() {
     ImGui::End();
 }
 
-void ClientLayer::UI_UserInfo(const User& user, bool self) {
+void ClientLayer::UI_UserInfo() {
+    bool self = (m_profile_user.get_user_id() == m_current_user.get_user_id());
     if (self) {
-        // display the avatar at the center
-        // followed by the name
-
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
@@ -875,7 +876,7 @@ void ClientLayer::UI_UserInfo(const User& user, bool self) {
         ImGui::PopStyleVar(2);
 
         // center the name
-        std::string name = m_current_user.get_fullname();
+        std::string name = m_profile_user.get_fullname();
         ImGui::SetCursorPosX(
             (ImGui::GetWindowSize().x - ImGui::CalcTextSize(name.c_str()).x) *
             0.5f);
@@ -893,10 +894,12 @@ void ClientLayer::UI_UserInfo(const User& user, bool self) {
 
         ImGui::PopFont();
 
-        ImGui::Text((name + "(@" + m_current_user.get_username() + ")").c_str());
+        ImGui::Text(
+            (name + "(@" + m_profile_user.get_username() + ")").c_str());
 
-        int no_of_friends = m_current_user.m_friend_list.size();
-        ImGui::Text(("Number of friends: " + std::to_string(no_of_friends)).c_str());
+        int no_of_friends = m_profile_user.m_friend_list.size();
+        ImGui::Text(
+            ("Number of friends: " + std::to_string(no_of_friends)).c_str());
 
         ImGui::Separator();
 
@@ -909,6 +912,67 @@ void ClientLayer::UI_UserInfo(const User& user, bool self) {
         ImGui::SetCursorPosX((ImGui::GetWindowSize().x - 160) * 0.5f);
 
         ImGui::Button(ICON_FA_EDIT " Edit");
+
+        ImGui::SameLine();
+
+        ImGui::PopStyleVar(2);
+    } else {
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+        // center the avatar
+        ImGui::SetCursorPosX((ImGui::GetWindowSize().x - 100) * 0.5f);
+
+        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(100, 100));
+
+        ImGui::PopStyleVar(2);
+
+        // center the name
+        std::string name = m_profile_user.get_fullname();
+        ImGui::SetCursorPosX(
+            (ImGui::GetWindowSize().x - ImGui::CalcTextSize(name.c_str()).x) *
+            0.5f);
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text(name.c_str());
+
+        ImGui::PopFont();
+
+        ImGui::Separator();
+
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+        ImGui::Text("Info");
+
+        ImGui::PopFont();
+
+        ImGui::Text(
+            (name + "(@" + m_profile_user.get_username() + ")").c_str());
+
+        int no_of_mutual_friends = 0;
+        for (auto user : m_friends) {
+            for (auto user2_id : m_profile_user.m_friend_list) {
+                if (user.get_user_id() == user2_id) {
+                    no_of_mutual_friends++;
+                    break;
+                }
+            }
+        }
+
+        ImGui::Text(("Mutual friends: " + std::to_string(no_of_mutual_friends))
+                        .c_str());
+
+        ImGui::Separator();
+
+        // draw edit button that spans the whole width
+
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(5, 0));
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
+
+        ImGui::SetCursorPosX((ImGui::GetWindowSize().x - 190) * 0.5f);
+
+        ImGui::Button(ICON_FA_COMMENT " Message");
 
         ImGui::SameLine();
 
@@ -1036,53 +1100,109 @@ void ClientLayer::UI_FriendList() {
 
     const float TextPadding = 8.0f;
 
-    ImGui::SetCursorPosY(TextPadding);
+    for (auto user : m_friends) {
+        ImGui::SetCursorPosY(TextPadding);
 
-    ImGui::SetCursorPosX(TextPadding);
+        ImGui::SetCursorPosX(TextPadding);
 
-    ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
-    ImGui::SameLine();
+        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
+        ImGui::SameLine();
 
-    ImGui::BeginGroup();
-    ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+        ImGui::BeginGroup();
+        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
 
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
 
-    ImGui::Text("Nguyen Van A");
-    ImGui::PopFont();
+        ImGui::Text(user.get_fullname().c_str());
+        ImGui::PopFont();
 
-    ImGui::SameLine();
+        ImGui::SameLine();
 
-    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
-    ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 50);
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 5);
+        ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
 
-    if (ImGui::Button(ICON_FA_ELLIPSIS_V)) {
-        ImGui::OpenPopup("##Friend Options");
-    }
+        // draw 4 icons
+        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 160);
 
-    ImGui::PopFont();
-
-    static int friend_option = 0;
-
-    const char* friend_options[] = {"Info", "Block", "Unfriend"};
-
-    if (ImGui::BeginPopup("##Friend Options")) {
-        for (int i = 0; i < IM_ARRAYSIZE(friend_options); i++) {
-            if (ImGui::Selectable(friend_options[i])) {
-                friend_option = i;
-            }
-            if (i < IM_ARRAYSIZE(friend_options) - 1) ImGui::Separator();
+        // profile
+        if (ImGui::Button(ICON_FA_USER)) {
+            m_profile_user = user;
+            m_view_profile = true;
         }
 
-        ImGui::EndPopup();
+        ImGui::SameLine();
+
+        // message
+
+        if (ImGui::Button(ICON_FA_COMMENT)) {
+            m_current_tab = Tab::Chat;
+
+            // ...
+        }
+
+        ImGui::SameLine();
+
+        // block
+
+        if (ImGui::Button(ICON_FA_BAN)) {
+            // ...
+        }
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            ImGui::Text(("Block " + user.get_fullname()).c_str());
+            ImGui::EndTooltip();
+        }
+
+        ImGui::SameLine();
+
+        // unfriend
+
+        if (ImGui::Button(ICON_FA_USER_TIMES)) {
+            // open a modal to clarify
+            ImGui::OpenPopup("##Unfriend");
+        }
+
+        if (ImGui::BeginPopupModal("##Unfriend", NULL,
+                                   ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text(("Are you sure you want to unfriend " +
+                         user.get_fullname() + "?")
+                            .c_str());
+
+            ImGui::Separator();
+
+            if (ImGui::Button("Yes", ImVec2(120, 0))) {
+                // send unfriend request
+                Walnut::BufferStreamWriter stream(m_scratch_buffer);
+                stream.WriteRaw< PacketType >(PacketType::Unfriend);
+                stream.WriteRaw< uint32_t >(user.get_user_id());
+
+                m_client->SendBuffer(stream.GetBuffer());
+
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("No", ImVec2(120, 0))) {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            ImGui::Text(("Unfriend " + user.get_fullname()).c_str());
+            ImGui::EndTooltip();
+        }
+
+        ImGui::PopFont();
+
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+        ImGui::Separator();
+        ImGui::EndGroup();
     }
-
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
-
-    ImGui::Separator();
-
-    ImGui::EndGroup();
 
     ImGui::PopStyleVar();
     ImGui::EndChild();
@@ -1236,43 +1356,11 @@ void ClientLayer::UI_FriendsRequest() {
     if (ImGui::CollapsingHeader("Friend requests")) {
         // avatar + name + accept + decline
 
-        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
+        for (int i = 0; i < m_pending_friends.size(); i++) {
+            const User& user = m_pending_friends[i];
 
-        ImGui::SameLine();
-
-        ImGui::BeginGroup();
-
-        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
-
-        ImGui::Text("Nguyen Van A");
-
-        ImGui::PopFont();
-
-        ImGui::Text("Hello, how are you?");
-
-        ImGui::EndGroup();
-
-        ImGui::SameLine();
-
-        ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
-
-        // align the two buttons at the right
-
-        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 115);
-
-        ImGui::Button(ICON_FA_USER_CIRCLE);
-
-        ImGui::SameLine();
-
-        ImGui::Button(ICON_FA_CHECK);
-
-        ImGui::SameLine();
-
-        ImGui::Button(ICON_FA_TIMES);
-
-        ImGui::PopFont();
-
-        ImGui::Separator();
+            UI_FriendItem(user, m_pending_friend_notes[i]);
+        }
     }
 
     if (ImGui::CollapsingHeader("Suggestions")) {
@@ -1352,55 +1440,19 @@ void ClientLayer::UI_FriendsRequest() {
 
         const float TextPadding = 8.0f;
 
-        ImGui::SetCursorPosY(TextPadding);
+        for (auto user : m_users) {
+            if (user.get_user_id() == m_current_user.get_user_id()) continue;
+            // if user is a friend, skip
+            if (std::find(m_friends.begin(), m_friends.end(), user) !=
+                m_friends.end())
+                continue;
 
-        ImGui::SetCursorPosX(TextPadding);
+            ImGui::SetCursorPosX(TextPadding + ImGui::GetCursorPosX());
 
-        // list
+            ImGui::SetCursorPosY(TextPadding + ImGui::GetCursorPosY());
 
-        // avatar + name + add friend
-
-        ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
-
-        ImGui::SameLine();
-
-        ImGui::BeginGroup();
-
-        ImGui::BeginGroup();
-
-        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
-
-        ImGui::Text("Nguyen Van A");
-
-        ImGui::PopFont();
-
-        // text input to add note
-
-        std::string note;
-
-        ImGui::InputText("##note", &note);
-
-        ImGui::EndGroup();
-
-        ImGui::SameLine();
-
-        ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
-
-        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 80);
-
-        ImGui::Button(ICON_FA_USER_CIRCLE);
-
-        ImGui::SameLine();
-
-        ImGui::Button(ICON_FA_USER_PLUS);
-
-        ImGui::PopFont();
-
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
-
-        ImGui::Separator();
-
-        ImGui::EndGroup();
+            UI_FriendItem(user, m_user_notes[user.get_user_id()]);
+        }
 
         ImGui::PopStyleVar();
         ImGui::EndChild();
@@ -1410,12 +1462,115 @@ void ClientLayer::UI_FriendsRequest() {
     ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
 }
 
+void ClientLayer::UI_FriendItem(const User& user, std::string& note) {
+    ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
+
+    ImGui::SameLine();
+
+    ImGui::BeginGroup();
+
+    ImGui::BeginGroup();
+
+    ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+    ImGui::Text(user.get_fullname().c_str());
+
+    ImGui::PopFont();
+
+    ImGui::InputText(("note##" + std::to_string(user.get_user_id())).c_str(),
+                     &note);
+
+    ImGui::EndGroup();
+
+    ImGui::SameLine();
+
+    ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
+
+    if (std::find(m_pending_friends.begin(), m_pending_friends.end(), user) !=
+        m_pending_friends.end()) {
+        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 115);
+
+        if (ImGui::Button(
+                (ICON_FA_USER_CIRCLE "##" + std::to_string(user.get_user_id()))
+                    .c_str())) {
+            m_view_profile = true;
+            m_profile_user = user;
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(
+                (ICON_FA_CHECK "##" + std::to_string(user.get_user_id()))
+                    .c_str())) {
+            // accept friend request
+            Walnut::BufferStreamWriter stream(m_scratch_buffer);
+
+            stream.WriteRaw< PacketType >(PacketType::AcceptFriend);
+
+            stream.WriteRaw< int64_t >(user.get_user_id());
+
+            m_client->SendBuffer(stream.GetBuffer());
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(
+                (ICON_FA_TIMES "##" + std::to_string(user.get_user_id()))
+                    .c_str())) {
+            // decline friend request
+            Walnut::BufferStreamWriter stream(m_scratch_buffer);
+
+            stream.WriteRaw< PacketType >(PacketType::DeclineFriend);
+
+            stream.WriteRaw< int64_t >(user.get_user_id());
+
+            m_client->SendBuffer(stream.GetBuffer());
+        }
+    } else {
+        ImGui::SetCursorPosX(ImGui::GetWindowSize().x - 80);
+
+        if (ImGui::Button(
+                (ICON_FA_USER_CIRCLE "##" + std::to_string(user.get_user_id()))
+                    .c_str())) {
+            m_view_profile = true;
+            m_profile_user = user;
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(
+                (ICON_FA_USER_PLUS "##" + std::to_string(user.get_user_id()))
+                    .c_str())) {
+            // add friend
+            Walnut::BufferStreamWriter stream(m_scratch_buffer);
+
+            stream.WriteRaw< PacketType >(PacketType::AddFriend);
+
+            stream.WriteRaw< int64_t >(user.get_user_id());
+
+            stream.WriteString(note);
+
+            m_client->SendBuffer(stream.GetBuffer());
+        }
+    }
+
+    ImGui::PopFont();
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
+
+    ImGui::Separator();
+
+    ImGui::EndGroup();
+}
+
 void ClientLayer::OnConnected() {}
 
 void ClientLayer::OnDisconnected() { m_client->Disconnect(); }
 
 void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
     Walnut::BufferStreamReader stream(buffer);
+
+    Walnut::BufferStreamWriter out_stream(m_scratch_buffer);
 
     PacketType type;
     stream.ReadRaw< PacketType >(type);
@@ -1436,17 +1591,34 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
                 break;
             }
 
-            std::cout << "hello" << std::endl;
-
             stream.ReadObject(m_current_user);
+            out_stream.WriteRaw< PacketType >(PacketType::RetrieveAllUsers);
+
+            m_client->SendBuffer(out_stream.GetBuffer());
+
+            // reset the stream and use it to send retrieve pending friend
+            // requests
+            out_stream.SetStreamPosition(0);
+            out_stream.WriteRaw< PacketType >(
+                PacketType::RetrievePendingFriendRequests);
+
+            m_client->SendBuffer(out_stream.GetBuffer());
+
+            // reset the stream and use it to send retrieve all friends
+            out_stream.SetStreamPosition(0);
+            out_stream.WriteRaw< PacketType >(PacketType::RetrieveAllFriends);
+
+            m_client->SendBuffer(out_stream.GetBuffer());
 
             m_current_tab = Tab::Chat;
 
             m_logged_in = true;
 
-            if(m_remember_me) SaveCredentials();
-            else DeleteCredentials();
-            
+            if (m_remember_me)
+                SaveCredentials();
+            else
+                DeleteCredentials();
+
             break;
         case PacketType::ClientLogoutRequest:
 
@@ -1463,10 +1635,82 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
             m_logged_in = false;
 
             m_current_tab = Tab::Default;
-            
+
             DeleteCredentials();
 
-            std::cout << "Logout success" << std::endl;
+            break;
+        case PacketType::RetrieveAllUsers:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadArray(m_users);
+
+            for (auto user : m_users) {
+                std::cout << user << std::endl;
+            }
+
+            break;
+        case PacketType::RetrieveAllFriends:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadArray(m_friends);
+
+            for (auto user : m_friends) {
+                std::cout << user << std::endl;
+            }
+
+            break;
+        case PacketType::RetrieveAllGroups:
+
+            break;
+        case PacketType::AddFriend:
+        case PacketType::AcceptFriend:
+        case PacketType::DeclineFriend:
+        case PacketType::Unfriend:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+            break;
+
+        case PacketType::RetrievePendingFriendRequests:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadArray(m_pending_friends);
+
+            stream.ReadArray(m_pending_friend_notes);
 
             break;
     }
@@ -1480,7 +1724,7 @@ void ClientLayer::SaveCredentials() {
     out << YAML::Key << "server_ip" << YAML::Value << m_server_ip;
 
     out << YAML::Key << "username" << YAML::Value
-		<< m_current_user.get_username();
+        << m_current_user.get_username();
 
     out << YAML::Key << "password" << YAML::Value
         << m_current_user.get_password();
@@ -1502,13 +1746,13 @@ void ClientLayer::LoadCredentials() {
     YAML::Node doc = YAML::Load(fin);
 
     m_server_ip = doc["server_ip"].as< std::string >();
-	std::string username = doc["username"].as< std::string >();
+    std::string username = doc["username"].as< std::string >();
     std::string password = doc["password"].as< std::string >();
 
-	m_current_user.set_username(username);
-	m_current_user.set_password(password);
-    
-	fin.close();
+    m_current_user.set_username(username);
+    m_current_user.set_password(password);
+
+    fin.close();
 
     ConnectToServer();
     m_has_credentials = true;
@@ -1519,7 +1763,7 @@ void ClientLayer::DeleteCredentials() {
     try {
         std::filesystem::remove(m_saved_credentials_file);
     } catch (std::filesystem::filesystem_error& e) {
-    	// std::cout << e.what() << std::endl;
+        // std::cout << e.what() << std::endl;
     }
 }
 
@@ -1551,8 +1795,6 @@ void ClientLayer::LoginToServer() {
     stream.WriteString(m_current_user.m_password);
 
     m_client->SendBuffer(stream.GetBuffer());
-
-    std::cout << "hehe" << std::endl;
 
     ImGui::CloseCurrentPopup();
 }

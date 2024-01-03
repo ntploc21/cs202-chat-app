@@ -9,11 +9,7 @@ class FriendManager {
 public:
     FriendManager(FriendManager const&) = delete;
     void operator=(FriendManager const&) = delete;
-    static FriendManager& getInstance() {
-        static FriendManager instance;  // Guaranteed to be destroyed.
-                                      // Instantiated on first use.
-        return instance;
-    }
+    static FriendManager& getInstance();
 
 private:
     FriendManager();
@@ -22,6 +18,7 @@ private:
 public:
     std::optional< Friend > add_friend(int user_1_id, int user_2_id, std::string note = "");
     std::optional< Friend > accept_friend(int user_1_id, int user_2_id);
+    bool decline_friend(int user_1_id, int user_2_id);
     bool unfriend(int user_1_id, int user_2_id);
     bool block(int user_1_id, int user_2_id);
     

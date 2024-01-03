@@ -9,11 +9,7 @@ class Authenticator {
 public:
     Authenticator(Authenticator const&) = delete;
     void operator=(Authenticator const&) = delete;
-    static Authenticator& getInstance() {
-        static Authenticator instance;  // Guaranteed to be destroyed.
-                                      // Instantiated on first use.
-        return instance;
-    }
+    static Authenticator& getInstance();
 
 private:
     Authenticator();

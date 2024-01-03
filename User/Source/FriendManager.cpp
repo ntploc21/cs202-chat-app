@@ -2,8 +2,14 @@
 
 #include "UserManager.hpp"
 
+FriendManager& FriendManager::getInstance() {
+    static FriendManager instance;  // Guaranteed to be destroyed.
+                                    // Instantiated on first use.
+    return instance;
+}
+
 FriendManager::FriendManager() {
-    //load_friends();
+    load_friends();
 }
 
 FriendManager::~FriendManager() { save_friends(); }
@@ -34,6 +40,14 @@ std::optional< Friend > FriendManager::accept_friend(int user_1_id,
     m_friends[pos].set_user_1_status(1).set_user_2_status(1).set_note();
 
     return m_friends[pos];
+}
+
+bool FriendManager::decline_friend(int user_1_id, int user_2_id) {
+    int pos = findById(user_1_id, user_2_id);
+	if (pos == -1) return false;
+
+	m_friends.erase(m_friends.begin() + pos);
+	return true;
 }
 
 bool FriendManager::unfriend(int user_1_id, int user_2_id) {
@@ -97,11 +111,11 @@ std::vector< int > FriendManager::get_friends_id(int user_id) {
             friend_.get_user_2_id() != user_id)
             continue;
 
-        int user_id = (friend_.get_user_1_id() == user_id)
+        int user_id_ = (friend_.get_user_1_id() == user_id)
                           ? friend_.get_user_2_id()
                           : friend_.get_user_1_id();
 
-        friends.push_back(user_id);
+        friends.push_back(user_id_);
     }
 
     return friends;

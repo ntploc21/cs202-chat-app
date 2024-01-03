@@ -46,16 +46,38 @@ void ClientRegisterHandler::handleImpl(const Walnut::ClientInfo& client_info,
 
     if (user.has_value()) {
         SendError(m_server, client_info, packet_type, "User already exists");
-    } else {
-        User new_user(username, password, fullname);
-        int user_id = UserManager::getInstance().add_user(new_user);
+        return;
+    }
+    User new_user(username, password, fullname);
+    int user_id = UserManager::getInstance().add_user(new_user);
 
-        new_user = UserManager::getInstance().get_user(user_id).value();
+    new_user = UserManager::getInstance().get_user(user_id).value();
 
-        auto& client = ClientManager::getInstance()[client_info.ID];
-        client = Authenticator::getInstance().add_session(user_id);
+    auto& client = ClientManager::getInstance()[client_info.ID];
+    client = Authenticator::getInstance().add_session(user_id);
 
-        SendClientConnectionSuccess(m_server, client_info, packet_type, new_user);
+    SendClientConnectionSuccess(m_server, client_info, packet_type, new_user);
+
+    // broadcast to all clients
+    auto clients = ClientManager::getInstance().getAllClients();
+
+    for (auto client_id : clients) {
+        if (client_id == client_info.ID) continue;
+
+        Walnut::Buffer scratch_buffer{};
+        scratch_buffer.Allocate(8192);
+
+        Walnut::BufferStreamWriter out_stream(scratch_buffer);
+        out_stream.WriteRaw< PacketType >(PacketType::RetrieveAllUsers);
+
+        auto users = UserManager::getInstance().get_users();
+
+        out_stream.WriteRaw< bool >(true);
+        out_stream.WriteArray(users);
+
+        m_server->SendBufferToClient(
+            client_id,
+            Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
     }
 }
 
@@ -99,7 +121,8 @@ void ClientLogoutHandler::handleImpl(const Walnut::ClientInfo& client_info,
     out_stream.WriteRaw< bool >(true);
 
     m_server->SendBufferToClient(
-        client_info.ID, Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
+        client_info.ID,
+        Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
 }
 
 void SendError(std::shared_ptr< Walnut::Server > server,

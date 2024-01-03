@@ -9,6 +9,8 @@ project "App-Common"
 
    includedirs
    {
+	   "../User/Source",
+
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
       "../Walnut/vendor/glm",
@@ -18,6 +20,7 @@ project "App-Common"
 
       "%{IncludeDir.VulkanSDK}",
       "../Walnut/vendor/spdlog/include",
+      "../Walnut/vendor/yaml-cpp/include",
 
       -- Walnut-Networking
       "../Walnut/Walnut-Modules/Walnut-Networking/Source",
@@ -26,8 +29,11 @@ project "App-Common"
 
    links
    {
+	   "User",
        "Walnut",
        "Walnut-Networking",
+       
+       "yaml-cpp",
    }
 
    targetdir ("../bin/" .. outputdir .. "/%{prj.name}")

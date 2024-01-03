@@ -12,7 +12,14 @@ namespace Handler {
         ClientRegister,
         ClientLogin,
         ClientLogout,
-
+        RetrieveAllUsers,
+        RetrieveAllFriends,
+        RetrieveAllGroups,
+        AddFriend,
+        AcceptFriend,
+        DeclineFriend,
+        Unfriend,
+        RetrievePendingFriendRequests,
     };
 };
 

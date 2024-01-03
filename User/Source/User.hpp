@@ -31,7 +31,7 @@ public:
     User& set_online(bool online);
     User& set_group_list(std::vector< int > group_list);
     User& add_group(int group_id);
-    User& add_friend(int friend_id);
+    //User& add_friend(int friend_id);
     User& remove_group(int group_id);
 
     friend std::ostream& operator<<(std::ostream& out, const User& user);
@@ -45,6 +45,8 @@ public:
     friend YAML::Emitter& operator<<(YAML::Emitter& out, const User& user);
 
     friend void operator>>(const YAML::Node& in, User& user);
+
+    bool operator==(const User& other) const;
 
 
 public:
@@ -60,3 +62,5 @@ public:
     std::vector< int > m_friend_list{};
     std::vector< int > m_group_list{};
 };
+
+bool validate_user_password(std::string_view password);

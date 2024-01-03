@@ -1,5 +1,7 @@
 #include "ServerController.hpp"
 
+#include <iostream>
+
 #include "Handler/ServerHandlerFactory.hpp"
 #include "Walnut/Core/Assert.h"
 #include "Walnut/Serialization/BufferStream.h"
@@ -18,6 +20,22 @@ void ServerController::constructHandlers() {
         Handler::ID::ClientRegister};
     m_packet_handlers[PacketType::ClientLogoutRequest] = {
         Handler::ID::Authenticate, Handler::ID::ClientLogout};
+    m_packet_handlers[PacketType::RetrieveAllUsers] = {
+        Handler::ID::Authenticate, Handler::ID::RetrieveAllUsers};
+    m_packet_handlers[PacketType::RetrieveAllFriends] = {
+        Handler::ID::Authenticate, Handler::ID::RetrieveAllFriends};
+    m_packet_handlers[PacketType::RetrieveAllGroups] = {
+        Handler::ID::Authenticate, Handler::ID::RetrieveAllGroups};
+    m_packet_handlers[PacketType::AddFriend] = {Handler::ID::Authenticate,
+                                                Handler::ID::AddFriend};
+    m_packet_handlers[PacketType::AcceptFriend] = {Handler::ID::Authenticate,
+                                                   Handler::ID::AcceptFriend};
+    m_packet_handlers[PacketType::DeclineFriend] = {Handler::ID::Authenticate,
+                                                    Handler::ID::DeclineFriend};
+    m_packet_handlers[PacketType::Unfriend] = {Handler::ID::Authenticate,
+                                               Handler::ID::Unfriend};
+    m_packet_handlers[PacketType::RetrievePendingFriendRequests] = {
+        Handler::ID::Authenticate, Handler::ID::RetrievePendingFriendRequests};
 }
 
 void ServerController::handlePacket(const Walnut::ClientInfo& client_info,

@@ -1,7 +1,5 @@
 #include "User.hpp"
 
-#include "User-Utils.hpp"
-
 User::User() {}
 
 User::User(std::string username, std::string password, std::string fullname,
@@ -151,3 +149,9 @@ void User::Deserialize(Walnut::StreamReader* deserializer, User& instance) {
     deserializer->ReadArray(instance.m_friend_list);
     deserializer->ReadArray(instance.m_group_list);
 }
+
+bool User::operator==(const User& other) const {
+    return this->m_user_id == other.m_user_id;
+}
+
+bool validate_user_password(std::string_view password) { return true; }

@@ -38,6 +38,8 @@ std::optional< User > UserManager::get_user(int user_id) {
     if (pos == -1) return std::nullopt;
     User user = m_users[pos];
     user.m_friend_list = FriendManager::getInstance().get_friends_id(user_id);
+
+    return user;
 }
 
 std::vector< User > UserManager::filter(
