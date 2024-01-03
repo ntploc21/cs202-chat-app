@@ -1,7 +1,5 @@
 #include "User.hpp"
 
-#include "User-Utils.hpp"
-
 User::User() {}
 
 User::User(std::string username, std::string password, std::string fullname,
@@ -31,8 +29,6 @@ bool User::is_active() const { return this->m_active; }
 bool User::is_online() const { return this->m_online; }
 
 std::vector< int > User::get_group_list() const { return this->m_group_list; }
-
-std::vector< int > User::get_friend_list() const { return this->m_friend_list; }
 
 User& User::set_user_id(int user_id) {
     this->m_user_id = user_id;
@@ -72,18 +68,8 @@ User& User::set_group_list(std::vector< int > group_list) {
     return *this;
 }
 
-User& User::set_friend_list(std::vector< int > friend_list) {
-    this->m_friend_list = friend_list;
-    return *this;
-}
-
 User& User::add_group(int group_id) {
     this->m_group_list.push_back(group_id);
-    return *this;
-}
-
-User& User::add_friend(int friend_id) {
-    this->m_friend_list.push_back(friend_id);
     return *this;
 }
 
@@ -91,13 +77,6 @@ User& User::remove_group(int group_id) {
     this->m_group_list.erase(std::remove(this->m_group_list.begin(),
                                          this->m_group_list.end(), group_id),
                              this->m_group_list.end());
-    return *this;
-}
-
-User& User::remove_friend(int friend_id) {
-    this->m_friend_list.erase(std::remove(this->m_friend_list.begin(),
-                                          this->m_friend_list.end(), friend_id),
-                              this->m_friend_list.end());
     return *this;
 }
 
@@ -114,35 +93,65 @@ std::ostream& operator<<(std::ostream& out, const User& user) {
         out << "- " << group << "\n";
     }
 
-    out << "Friends: \n";
-    for (int friend_id : user.m_friend_list) {
-        out << "- " << friend_id << "\n";
-    }
+    return out;
+}
+
+YAML::Emitter& operator<<(YAML::Emitter& out, const User& user) {
+    out << YAML::BeginMap;
+
+    out << YAML::Key << "user_id" << YAML::Value << user.m_user_id;
+
+    out << YAML::Key << "username" << YAML::Value << user.m_username;
+
+    out << YAML::Key << "password" << YAML::Value << user.m_password;
+
+    out << YAML::Key << "fullname" << YAML::Value << user.m_fullname;
+
+    out << YAML::Key << "active" << YAML::Value << user.m_active;
+
+    out << YAML::Key << "online" << YAML::Value << user.m_online;
+
+    out << YAML::Key << "group_list" << YAML::Value << user.m_group_list;
+
+    out << YAML::EndMap;
 
     return out;
 }
 
+void operator>>(const YAML::Node& in, User& user) {
+    user.m_user_id = in["user_id"].as< int >();
+    user.m_username = in["username"].as< std::string >();
+    user.m_password = in["password"].as< std::string >();
+    user.m_fullname = in["fullname"].as< std::string >();
+    user.m_active = in["active"].as< bool >();
+    user.m_online = in["online"].as< bool >();
+    user.m_group_list = in["group_list"].as< std::vector< int > >();
+}
 
-
-void User::Serialize(Walnut::StreamWriter* serializer,
-                        const User& instance) {
+void User::Serialize(Walnut::StreamWriter* serializer, const User& instance) {
     serializer->WriteRaw< int >(instance.m_user_id);
     serializer->WriteString(instance.m_username);
     serializer->WriteString(instance.m_password);
     serializer->WriteString(instance.m_fullname);
     serializer->WriteRaw< bool >(instance.m_active);
     serializer->WriteRaw< bool >(instance.m_online);
-    serializer->WriteArray(instance.m_group_list);
     serializer->WriteArray(instance.m_friend_list);
+    serializer->WriteArray(instance.m_group_list);
 }
 
 void User::Deserialize(Walnut::StreamReader* deserializer, User& instance) {
     deserializer->ReadRaw< int >(instance.m_user_id);
-	deserializer->ReadString(instance.m_username);
-	deserializer->ReadString(instance.m_password);
-	deserializer->ReadString(instance.m_fullname);
-	deserializer->ReadRaw< bool >(instance.m_active);
-	deserializer->ReadRaw< bool >(instance.m_online);
-	deserializer->ReadArray(instance.m_group_list);
-	deserializer->ReadArray(instance.m_friend_list);
+    deserializer->ReadString(instance.m_username);
+    deserializer->ReadString(instance.m_password);
+    deserializer->ReadString(instance.m_fullname);
+    deserializer->ReadRaw< bool >(instance.m_active);
+    deserializer->ReadRaw< bool >(instance.m_online);
+    deserializer->ReadArray(instance.m_friend_list);
+    deserializer->ReadArray(instance.m_group_list);
 }
+
+bool User::operator==(const User& other) const {
+    return this->m_user_id == other.m_user_id;
+}
+
+bool validate_user_password(std::string_view password) { return true; }

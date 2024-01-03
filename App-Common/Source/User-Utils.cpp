@@ -1,3 +1,11 @@
 #include "User-Utils.hpp"
 
-bool validate_user_password(std::string_view password) { return true; }
+void filter_credentials(User& user) {
+	user.set_password("");
+}
+
+void filter_credentials(std::vector<User>& users) {
+	for (auto& user : users) {
+		filter_credentials(user);
+	}
+}

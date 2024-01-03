@@ -5,7 +5,7 @@ project "User"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "Source/**.h", "Source/**.cpp", "Source/**.hpp" }
+   files { "Source/**.cpp", "Source/**.hpp" }
 
    includedirs
    {
@@ -20,14 +20,26 @@ project "User"
 
       "%{IncludeDir.VulkanSDK}",
       "../Walnut/vendor/spdlog/include",
+      "../Walnut/vendor/yaml-cpp/include",
 
-      "../Walnut-Networking/vendor/GameNetworkingSockets/include"
+      "../Walnut-Networking/vendor/GameNetworkingSockets/include",
+
+      "../date/include/",
    }
 
    links
    {
        "Walnut",
        "Walnut-Networking",
+       
+      "yaml-cpp",
+
+      -- "date",
+   }
+
+   defines
+   {
+       "YAML_CPP_STATIC_DEFINE"
    }
 
    targetdir ("../bin/" .. outputdir .. "/%{prj.name}")

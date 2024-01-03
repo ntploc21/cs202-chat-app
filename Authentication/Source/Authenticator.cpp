@@ -1,6 +1,11 @@
 #include "Authenticator.hpp"
-
 #include "UserManager.hpp"
+
+Authenticator& Authenticator::getInstance() {
+    static Authenticator instance;  // Guaranteed to be destroyed.
+                                    // Instantiated on first use.
+    return instance;
+}
 
 Authenticator::Authenticator() {
     load_sessions();
@@ -69,7 +74,7 @@ Session Authenticator::add_session(int user_id) {
         m_sessions.erase(m_sessions.begin() + result.value());
     }
 
-    Session session(m_next_id++, user_id);
+    Session session(++m_next_id, user_id);
     m_sessions.push_back(session);
 
     return session;

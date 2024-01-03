@@ -18,3 +18,7 @@ build/
 bin/
 
 bin-int/
+
+*.ini
+
+*.yaml

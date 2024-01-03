@@ -2,5 +2,8 @@
 
 #include <string_view>
 
+#include "User.hpp"
 
-bool validate_user_password(std::string_view password);
+void filter_credentials(User& user);
+
+void filter_credentials(std::vector< User >& users);

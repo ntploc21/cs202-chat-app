@@ -5,11 +5,14 @@ project "App-Server"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "Source/**.h", "Source/**.cpp", "Source/**.hpp" }
+   files { "Source/**.cpp", "Source/**.hpp" }
 
    includedirs
    {
+	   "../User/Source",
+      "../Authentication/Source",
       "../App-Common/Source",
+      "../Message/Source",
 
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
@@ -24,14 +27,21 @@ project "App-Server"
 
       -- Walnut-Networking
       "../Walnut/Walnut-Modules/Walnut-Networking/Source",
-      "../Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/include"
+      "../Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/include",
+
+      "../date/include/",
    }
 
    links
    {
-       "App-Common",
+      "App-Common",
+	   "User",
+      "Authentication",
+      "Message",
        
-       "yaml-cpp",
+      "yaml-cpp",
+      
+      -- "date",
    }
 
    defines

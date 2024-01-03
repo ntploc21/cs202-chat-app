@@ -25,6 +25,7 @@ public:
     // date get_expiration_date() const { return expiration_date; }
     // void set_expiration_date(date expiration_date) { this->expiration_date =
     // expiration_date;
+public:
 
     int m_session_id{};
     int m_user_id{};

@@ -5,10 +5,12 @@ project "App-Common"
    targetdir "bin/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "Source/**.h", "Source/**.cpp", "Source/**.hpp" }
+   files { "Source/**.cpp", "Source/**.hpp", "Source/**.h", "Font/*.ttf" }
 
    includedirs
    {
+	   "../User/Source",
+
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
       "../Walnut/vendor/glm",
@@ -18,14 +20,20 @@ project "App-Common"
 
       "%{IncludeDir.VulkanSDK}",
       "../Walnut/vendor/spdlog/include",
+      "../Walnut/vendor/yaml-cpp/include",
 
-      "../Walnut-Networking/vendor/GameNetworkingSockets/include"
+      -- Walnut-Networking
+      "../Walnut/Walnut-Modules/Walnut-Networking/Source",
+      "../Walnut/Walnut-Modules/Walnut-Networking/vendor/GameNetworkingSockets/include"
    }
 
    links
    {
+	   "User",
        "Walnut",
        "Walnut-Networking",
+       
+       "yaml-cpp",
    }
 
    targetdir ("../bin/" .. outputdir .. "/%{prj.name}")
