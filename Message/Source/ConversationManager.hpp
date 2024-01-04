@@ -27,6 +27,8 @@ public:
 	std::vector< Conversation > get_conversations();
     std::vector< Message > get_messages(int conversation_id);
     std::optional< Message > get_last_message(int conversation_id);
+
+    bool add_message(int conversation_id, Message message);
     
     std::optional< Message > send_message(int sender_id, int conversation_id, Message message);
     std::optional< Message > send_message(int sender_id, int conversation_id, std::string message);
@@ -35,6 +37,7 @@ public:
     
     void insert_conversations(std::vector< Conversation > conversations);
 
+    void clear_data();
 private:
     void save_conversations();
 	void load_conversations();

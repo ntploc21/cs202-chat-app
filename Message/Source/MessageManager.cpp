@@ -33,12 +33,10 @@ bool MessageManager::update_message(Message message) {
     return false;
 }
 
-Message MessageManager::get_message(int message_id) {
+std::optional< Message > MessageManager::get_message(int message_id) {
     int pos = findById(message_id);
-    if (pos != -1) {
-        return m_messages[pos];
-    }
-    return Message();
+    if (pos == -1) return std::nullopt;
+    return m_messages[pos];
 }
 
 std::vector< Message > MessageManager::get_messages() { return m_messages; }
@@ -67,6 +65,12 @@ void MessageManager::set_used_by_client() {
 void MessageManager::insert_messages(std::vector< Message > messages) {
     if(!m_used_by_client) return;
     m_messages.insert(m_messages.end(), messages.begin(), messages.end());
+    m_next_id = 0;
+}
+
+void MessageManager::clear_data() {
+    if(!m_used_by_client) return;
+    m_messages.clear();
     m_next_id = 0;
 }
 
@@ -111,6 +115,8 @@ void MessageManager::load_messages() {
     }
 
     m_next_id = doc[doc.size() - 1].as< int >();
+
+    std::cout << "hihi" << std::endl;
 }
 
 int MessageManager::findById(int id) {

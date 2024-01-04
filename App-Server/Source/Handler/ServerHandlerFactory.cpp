@@ -51,6 +51,13 @@ ServerHandler* ServerHandlerFactory::createHandler(Handler::ID id) {
         case Handler::ID::RetrieveAllDMs:
             handler = new RetrieveAllDMsHandler();
 			break;
+        case Handler::ID::SendDirectMessage:
+			handler = new SendDirectMessageHandler();
+			break;
+		case Handler::ID::SendGroupMessage:
+            handler = new SendGroupMessageHandler();
+            break;
+
     }
     return handler;
 }

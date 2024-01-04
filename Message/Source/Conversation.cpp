@@ -1,5 +1,7 @@
 #include "Conversation.hpp"
 
+#include <iostream>
+
 #include "MessageManager.hpp"
 
 Conversation::Conversation() {
@@ -17,9 +19,12 @@ std::vector< int > Conversation::get_messages_id() const { return m_messages; }
 
 std::vector< Message > Conversation::get_messages() const {
     std::vector< Message > messages{};
+
     for (int i = 0; i < m_messages.size(); i++) {
-        messages.push_back(
-            MessageManager::getInstance().get_message(m_messages[i]));
+        auto msg =
+            MessageManager::getInstance().get_message(m_messages[i]);
+        assert(msg.has_value());
+        messages.push_back(msg.value());
     }
     return messages;
 }
@@ -27,7 +32,7 @@ std::vector< Message > Conversation::get_messages() const {
 std::optional< Message > Conversation::get_last_message() const {
     if (m_messages.size() == 0) return std::nullopt;
 
-	return MessageManager::getInstance().get_message(m_messages.back());
+    return MessageManager::getInstance().get_message(m_messages.back());
 }
 
 Conversation& Conversation::add_message(int message_id) {
@@ -103,7 +108,7 @@ YAML::Emitter& operator<<(YAML::Emitter& out,
     out << YAML::EndSeq;
 
     out << YAML::Key << "last_msg_at" << YAML::Value
-		<< conversation.m_last_msg_at.time_since_epoch().count();
+        << conversation.m_last_msg_at.time_since_epoch().count();
 
     out << YAML::EndMap;
     return out;
@@ -116,14 +121,16 @@ void operator>>(const YAML::Node& in, Conversation& conversation) {
         conversation.m_messages.push_back(in["messages"][i].as< int >());
     }
 
-    conversation.m_last_msg_at = date::floor< date::days >(std::chrono::system_clock::now() + std::chrono::seconds(in["last_msg_at"].as< int >()));
+    conversation.m_last_msg_at =
+        date::sys_seconds(std::chrono::seconds(in["last_msg_at"].as< int >()));
 }
 
 void Conversation::Serialize(Walnut::StreamWriter* serializer,
                              const Conversation& instance) {
     serializer->WriteRaw< int >(instance.m_conversation_id);
     serializer->WriteArray(instance.m_messages);
-    serializer->WriteRaw< int >(instance.m_last_msg_at.time_since_epoch().count());
+    serializer->WriteRaw< int >(
+        instance.m_last_msg_at.time_since_epoch().count());
 }
 
 void Conversation::Deserialize(Walnut::StreamReader* deserializer,
@@ -133,5 +140,6 @@ void Conversation::Deserialize(Walnut::StreamReader* deserializer,
 
     int last_msg_at;
     deserializer->ReadRaw< int >(last_msg_at);
-    instance.m_last_msg_at = date::floor< date::days >(std::chrono::system_clock::now() + std::chrono::seconds(last_msg_at));
+    instance.m_last_msg_at = date::floor< date::days >(
+        std::chrono::system_clock::now() + std::chrono::seconds(last_msg_at));
 }

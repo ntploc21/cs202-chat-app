@@ -12,3 +12,13 @@ private:
                     const PacketType packet_type,
                     Walnut::BufferStreamReader& stream) override;
 };
+
+class SendGroupMessageHandler : public ServerHandler {
+public:
+	SendGroupMessageHandler();
+
+private:
+	void handleImpl(const Walnut::ClientInfo& client_info,
+		const PacketType packet_type,
+		Walnut::BufferStreamReader& stream) override;
+};;

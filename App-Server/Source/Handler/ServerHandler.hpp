@@ -20,7 +20,9 @@ namespace Handler {
         Unfriend,
         RetrievePendingFriendRequests,
         RetrieveAllDMs,
-        RetrieveAllGroups
+        RetrieveAllGroups,
+        SendDirectMessage,
+        SendGroupMessage,
     };
 };
 

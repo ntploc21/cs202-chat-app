@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 
@@ -30,6 +31,10 @@ void ClientLayer::OnAttach() {
     m_client->SetServerDisconnectedCallback([this]() { OnDisconnected(); });
     m_client->SetDataReceivedCallback(
         [this](const Walnut::Buffer data) { OnDataReceived(data); });
+
+    m_MessageSendCallback = [this](std::string_view message) {
+        SendChatMessage(message);
+    };
 
     // ImGui::StyleColorsLight();
 
@@ -481,7 +486,8 @@ void ClientLayer::UI_UserList() {
 
                 // if clicked, change the chat to this chat
                 if (ImGui::IsItemClicked()) {
-                    std::cout << "hello" << std::endl;
+                    m_chat.id = direct_message.get_dm_id();
+                    m_chat.type = 0;
                     // m_current_chat = direct_message;
                 }
 
@@ -528,12 +534,35 @@ void ClientLayer::UI_MainCenter() {
     ImGui::Begin("Main Chat", &open,
                  ImGuiWindowFlags_NoDecoration | ImGuiDockNodeFlags_NoTabBar);
 
-    UI_MainCenterDM();
+    if (m_chat.id) {
+        if (!m_chat.type)
+            UI_MainCenterDM();
+        else
+            UI_MainCenterGroup();
+    }
 
     ImGui::End();
 }
 
 void ClientLayer::UI_MainCenterDM() {
+    DirectMessage direct_message = DirectMessageManager::getInstance()
+                                       .get_direct_message(m_chat.id)
+                                       .value();
+
+    Conversation conversation =
+        ConversationManager::getInstance()
+            .get_conversation(direct_message.get_conversation_id())
+            .value();
+    std::vector< Message > messages = conversation.get_messages();
+
+    if (direct_message.get_user_id_2() == m_current_user.get_user_id()) {
+        std::swap(direct_message.m_user_id_1, direct_message.m_user_id_2);
+        std::swap(direct_message.m_user_1_nickname,
+                  direct_message.m_user_2_nickname);
+        std::swap(direct_message.m_user_1_last_seen_at,
+                  direct_message.m_user_2_last_seen_at);
+    }
+
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
@@ -547,7 +576,9 @@ void ClientLayer::UI_MainCenterDM() {
 
     ImGui::PushFont(Walnut::Application::GetFont("Bold"));
 
-    ImGui::Text("Nguyen Van A");
+    std::string name = direct_message.m_user_2_nickname;
+
+    ImGui::Text(name.c_str());
 
     ImGui::PopFont();
 
@@ -566,6 +597,8 @@ void ClientLayer::UI_MainCenterDM() {
     ImGui::EndGroup();
 
     ImGui::Separator();
+
+    const float TextPadding = 8.0f;
 
     // draw the chat box
 
@@ -590,169 +623,146 @@ void ClientLayer::UI_MainCenterDM() {
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                             ImVec2(4, 1));  // Tighten spacing
 
-        const float TextPadding = 8.0f;
-
         ImGui::SetCursorPosY(TextPadding);
 
-        for (int i = 0; i < 5; i++) {
-            /*if (!m_Filter.PassFilter(m_MessageHistory[i].Message.c_str()))
-                continue;
+        for (int i = 0, j = 0; i < messages.size(); i = j) {
+            while (j < messages.size() &&
+                   messages[i].get_from_id() == messages[j].get_from_id())
+                j++;
 
-            ImGui::SetCursorPosX(TextPadding);
+            if (messages[i].get_from_id() == m_current_user.get_user_id()) {
+                // message from you (only the message and the time)
+                // messages are aligned to the right and in light blue
+                // align in such a way that the the padding between the message
+                // and the right side of the window is 8px if the message is too
+                // long, it should be wrapped to the next line the width of a
+                // message should not exceed 1/2 of the window width
 
-            // Normally you would store more information in your item than just
-            // a string. (e.g. make Items[] an array of structure, store
-            // color/type etc.)
-            ImGui::PushStyleColor(ImGuiCol_Text,
-                                  ImColor(m_MessageHistory[i].Color).Value);
-            ImVec4 finalColor = ImColor(m_MessageHistory[i].Color).Value;
-            if (!m_MessageHistory[i].Tag.empty()) {
-                ImGui::PushFont(Application::GetFont("Bold"));
-                ImGui::TextUnformatted(m_MessageHistory[i].Tag.c_str());
+                for (int k = i; k < j; k++) {
+                    std::string content = messages[k].get_content();
+                    float width = ImGui::CalcTextSize(content.c_str()).x;
+
+                    ImGui::SetCursorPosX(ImGui::GetWindowSize().x - width -
+                                         TextPadding - 25);
+
+                    // color the background of the text wrapped
+
+                    ImGui::PushStyleColor(ImGuiCol_Button,
+                                          ImVec4(0.0f, 0.0f, 1.0f, 0.1f));
+
+                    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + width);
+
+                    ImGui::Button(
+                        (content + "##dm_msg" + std::to_string(k)).c_str());
+
+                    ImGui::PopTextWrapPos();
+
+                    ImGui::PopStyleColor();
+                }
+                ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+
+                // set pos x
+
+                ImGui::SetCursorPosX(ImGui::GetWindowSize().x -
+                                     ImGui::CalcTextSize("10:00 AM").x -
+                                     TextPadding - 10);
+
+                ImGui::Text("10:00 AM");
+
                 ImGui::PopFont();
-                ImGui::SameLine(0.0f, TextPadding);
+            } else {
+                // message from others (avatar, name, message and time)
+                // messages are aligned to the left and in white
+                // align in such a way that the the padding between the message
+                // and the left side of the window is 8px if the message is too
+                // long, it should be wrapped to the next line the width of a
+                // message should not exceed 1/2 of the window width
+
+                ImGui::BeginGroup();
+
+                ImGui::NewLine();
+
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2 + (j - i - 1) * 33);
+
+                ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
+
+                ImGui::EndGroup();
+
+                ImGui::SameLine();
+
+                ImGui::BeginGroup();
+
+                ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+
+                std::string name = direct_message.m_user_2_nickname;
+
+                ImGui::Text(name.c_str());
+
+                ImGui::PopFont();
+
+                for (int k = i; k < j; k++) {
+                    std::string content = messages[k].get_content();
+                    float width = ImGui::CalcTextSize(content.c_str()).x;
+
+                    ImGui::Button(content.c_str());
+                    if (ImGui::BeginPopupContextItem(("##message_dm_other_" + std::to_string(k)).c_str())) {
+                        // add some options: copy, unsend for everyone, unsend
+                        // for
+                        // 					// me, forward,
+                        // reply, pin
+                        //
+                        // 					// ... add later
+                        //
+                        ImGui::EndPopup();
+                    }
+                }
+                ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+                ImGui::Text("10:00 AM");
+                ImGui::PopFont();
+                ImGui::EndGroup();
             }
-
-            if (m_MessageHistory[i].Italic)
-                ImGui::PushFont(Application::GetFont("Italic"));
-
-            ImGui::TextUnformatted(m_MessageHistory[i].Message.c_str());
-
-            if (m_MessageHistory[i].Italic) ImGui::PopFont();
-
-            ImGui::PopStyleColor();*/
-
-            // every message has an avatar, a name, a message and a time (for
-            // the most recent message group) implement this to look similar to
-            // messenger (the most recent message group should be at the bottom)
-            // if the messages are ours, they should be on the right, otherwise,
-            // they should be on the left if the messages are ours, they should
-            // be in blue, otherwise, they should be in white
-
-            ImGui::SetCursorPosX(TextPadding);
-
-            ImGui::BeginGroup();
-
-            ImGui::NewLine();
-
-            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2 + 4 * 33);
-
-            ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
-
-            ImGui::EndGroup();
-
-            ImGui::SameLine();
-
-            ImGui::BeginGroup();
-
-            ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-
-            ImGui::Text("Nguyen Van A");
-
-            ImGui::PopFont();
-
-            // cover the whole width
-
-            ImGui::Button("Hello, how are you?");
-            if (ImGui::BeginPopupContextItem("##message")) {
-                // add some options: copy, unsend for everyone, unsend for me,
-                // forward, reply, pin
-
-                // ... add later
-
-                ImGui::EndPopup();
-            }
-
-            ImGui::Button("Hehe");
-
-            ImGui::Button("Haha");
-
-            ImGui::Button("Huhu");
-
-            ImGui::Button("Hoho");
-
-            // add time (nut using button)
-
-            ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-
-            ImGui::Text("10:00 AM");
-
-            ImGui::PopFont();
-
-            ImGui::EndGroup();
-
-            // message from you (only the message and the time)
-            // messages are aligned to the right and in light blue
-            // align in such a way that the the padding between the message and
-            // the right side of the window is 8px
-
-            ImGui::SetCursorPosX(ImGui::GetWindowSize().x -
-                                 ImGui::CalcTextSize("Hello, how are you?").x -
-                                 TextPadding - 25);
-
-            // color the button, not the text
-
-            ImGui::PushStyleColor(ImGuiCol_Button,
-                                  ImVec4(0.0f, 0.0f, 1.0f, 0.1f));
-
-            ImGui::Button("Hello, how are you?");
-
-            ImGui::PopStyleColor();
-
-            ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-
-            // set pos x
-
-            ImGui::SetCursorPosX(ImGui::GetWindowSize().x -
-                                 ImGui::CalcTextSize("10:00 AM").x -
-                                 TextPadding - 10);
-
-            ImGui::Text("10:00 AM");
-
-            ImGui::PopFont();
         }
+    }
 
-        if (m_ScrollToBottom ||
-            (m_AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
-            ImGui::SetScrollHereY(1.0f);
+    if (m_ScrollToBottom ||
+        (m_AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
+        ImGui::SetScrollHereY(1.0f);
 
-        m_ScrollToBottom = false;
+    m_ScrollToBottom = false;
 
-        ImGui::PopStyleVar();
-        ImGui::EndChild();
-        ImGui::PopStyleVar();
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
 
-        // Command-line
-        static bool reclaim_focus = false;
-        ImGuiInputTextFlags input_text_flags =
-            ImGuiInputTextFlags_EnterReturnsTrue;
+    // Command-line
+    static bool reclaim_focus = false;
+    ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EnterReturnsTrue;
 
-        const float sendButtonWidth = 100.0f;
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x -
-                                sendButtonWidth - TextPadding);
-        if (ImGui::InputText("##input", &m_MessageBuffer, input_text_flags)) {
-            if (m_MessageSendCallback) m_MessageSendCallback(m_MessageBuffer);
+    const float sendButtonWidth = 100.0f;
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - sendButtonWidth -
+                            TextPadding);
+    if (ImGui::InputText("##input", &m_MessageBuffer, input_text_flags)) {
+        if (m_MessageSendCallback) m_MessageSendCallback(m_MessageBuffer);
 
-            // Clear InputText
-            m_MessageBuffer = "";
-            reclaim_focus = true;
-        }
+        // Clear InputText
+        m_MessageBuffer = "";
+        reclaim_focus = true;
+    }
 
-        // Auto-focus on window apparition
-        ImGui::SetItemDefaultFocus();
-        if (reclaim_focus) {
-            ImGui::SetKeyboardFocusHere(-1);  // Auto focus previous widget
-            reclaim_focus = false;
-        }
+    // Auto-focus on window apparition
+    ImGui::SetItemDefaultFocus();
+    if (reclaim_focus) {
+        ImGui::SetKeyboardFocusHere(-1);  // Auto focus previous widget
+        reclaim_focus = false;
+    }
 
-        ImGui::SameLine();
-        if (ImGui::Button("Send", ImVec2(sendButtonWidth, 0.0f))) {
-            if (m_MessageSendCallback) m_MessageSendCallback(m_MessageBuffer);
+    ImGui::SameLine();
+    if (ImGui::Button("Send", ImVec2(sendButtonWidth, 0.0f))) {
+        if (m_MessageSendCallback) m_MessageSendCallback(m_MessageBuffer);
 
-            // Clear InputText
-            m_MessageBuffer = "";
-            reclaim_focus = true;
-        }
+        // Clear InputText
+        m_MessageBuffer = "";
+        reclaim_focus = true;
     }
 }
 
@@ -796,8 +806,8 @@ void ClientLayer::UI_Info() {
 
     ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), status.c_str());
 
-    // draw three buttons profile, mute and search and it should all on the same
-    // line
+    // draw three buttons profile, mute and search and it should all on the
+    // same line
 
     ImGui::PushFont(Walnut::Application::GetFont("FontAwesome"));
 
@@ -1427,8 +1437,8 @@ void ClientLayer::UI_Groups() {
 void ClientLayer::UI_FriendsRequest() {
     ImGui::PopFont();
 
-    // this tab will contain 3 collapsing headers (Friend requests, Suggestions,
-    // Add friends)
+    // this tab will contain 3 collapsing headers (Friend requests,
+    // Suggestions, Add friends)
 
     if (ImGui::CollapsingHeader("Friend requests")) {
         // avatar + name + accept + decline
@@ -1481,7 +1491,8 @@ void ClientLayer::UI_FriendsRequest() {
 
     if (ImGui::CollapsingHeader("Add friends")) {
         // display a search bar that you can use to search for friends
-        // when you enter a name, it will display a list of friends that match
+        // when you enter a name, it will display a list of friends that
+        // match
 
         // search bar
 
@@ -1660,6 +1671,9 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
     std::vector< Conversation > conversations;
     std::vector< Message > messages;
 
+    int dm_id;
+    Message msg_tmp;
+
     std::cout << PacketTypeToString(type) << std::endl;
 
     switch (type) {
@@ -1750,7 +1764,6 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
 
             break;
         case PacketType::AddFriend:
-        case PacketType::AcceptFriend:
         case PacketType::DeclineFriend:
         case PacketType::Unfriend:
             stream.ReadRaw< bool >(success);
@@ -1763,6 +1776,22 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
 
                 break;
             }
+            break;
+
+        case PacketType::AcceptFriend:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            SendPacket(PacketType::RetrieveAllDMs);
+
             break;
 
         case PacketType::RetrievePendingFriendRequests:
@@ -1833,11 +1862,33 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
                 conversations);
             MessageManager::getInstance().insert_messages(messages);
 
-            /*std::cout << "DM" << std::endl;
+            // m_chat.type = 0;
+            // m_chat.id = 1;
 
-            for (auto dm : direct_messages) {
-                std::cout << dm << std::endl;
-            }*/
+            break;
+        case PacketType::SendDirectMessage:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadRaw< int >(dm_id);
+            stream.ReadObject(msg_tmp);
+
+            DirectMessageManager::getInstance().add_message(dm_id, msg_tmp);
+
+            std::cout << "Send DM" << std::endl;
+            std::cout << dm_id << std::endl;
+            std::cout << msg_tmp << std::endl;
+
+            break;
+        case PacketType::SendGroupMessage:
 
             break;
     }
@@ -1924,6 +1975,23 @@ void ClientLayer::LoginToServer() {
     m_client->SendBuffer(stream.GetBuffer());
 
     ImGui::CloseCurrentPopup();
+}
+
+void ClientLayer::SendChatMessage(std::string_view message) {
+    Walnut::Buffer scratch_buffer;
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+
+    if (!m_chat.type) {
+        stream.WriteRaw< PacketType >(PacketType::SendDirectMessage);
+    } else {
+        stream.WriteRaw< PacketType >(PacketType::SendGroupMessage);
+    }
+    stream.WriteRaw< int >(m_chat.id);
+    stream.WriteString(message);
+
+    m_client->SendBuffer(stream.GetBuffer());
 }
 
 void ClientLayer::SendPacket(PacketType packet_type) {

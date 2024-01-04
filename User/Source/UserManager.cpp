@@ -88,6 +88,12 @@ void UserManager::load_users(std::vector< User > users) {
 	m_next_id = 0;
 }
 
+void UserManager::clear_data() {
+    if(!m_used_by_client) return;
+    m_users.clear();
+    m_next_id = 0;
+}
+
 std::vector< User > UserManager::get_users() { return m_users; }
 
 void UserManager::save_users() {

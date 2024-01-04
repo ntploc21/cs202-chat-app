@@ -62,6 +62,9 @@ private:
     void ConnectToServer();
     void LoginToServer();
 
+    //
+    void SendChatMessage(std::string_view message);
+
     // Send no argument packet
     void SendPacket(PacketType packet_type);
 
@@ -114,8 +117,8 @@ private:
 
 private:
     struct Chat {
-        int type;  // 0: DM, 1: Group
-        int id;
+        int type{};  // 0: DM, 1: Group
+        int id{};
         date::sys_seconds m_last_message_at{};
 
         /*bool operator<(const Chat& other) const {

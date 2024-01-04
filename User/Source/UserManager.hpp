@@ -45,6 +45,7 @@ public:
     
     void load_users(std::vector< User > users);
 
+    void clear_data();
 private:
     void save_users();
     void load_users();

@@ -24,6 +24,12 @@ int DirectMessageManager::new_direct_message(int user_1_id, int user_2_id) {
     return m_next_id;
 }
 
+bool DirectMessageManager::add_message(int direct_message_id, Message message) {
+    int pos = findById(direct_message_id);
+	if (pos == -1) return false;
+    return ConversationManager::getInstance().add_message(m_direct_messages[pos].get_conversation_id(), message);
+}
+
 bool DirectMessageManager::delete_direct_message(int direct_message_id) {
     int pos = findById(direct_message_id);
     if (pos == -1) return false;
@@ -38,9 +44,10 @@ bool DirectMessageManager::update_direct_message(DirectMessage direct_message) {
     return true;
 }
 
-DirectMessage DirectMessageManager::get_direct_message(int direct_message_id) {
+std::optional< DirectMessage > DirectMessageManager::get_direct_message(
+    int direct_message_id) {
     int pos = findById(direct_message_id);
-    if (pos == -1) return DirectMessage();
+    if (pos == -1) return std::nullopt;
     return m_direct_messages[pos];
 }
 
@@ -79,6 +86,12 @@ void DirectMessageManager::load_direct_messages(
     if (!m_used_by_client) return;
 
     m_direct_messages = direct_messages;
+    m_next_id = 0;
+}
+
+void DirectMessageManager::clear_data() {
+    if(!m_used_by_client) return;
+    m_direct_messages.clear();
     m_next_id = 0;
 }
 

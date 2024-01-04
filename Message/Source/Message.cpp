@@ -105,7 +105,8 @@ void operator>>(const YAML::Node& in, Message& user) {
 	user.m_from_id = in["from_id"].as< int >();
 	user.m_to_conversation_id = in["to_conversation_id"].as< int >();
 	user.m_content = in["content"].as< std::string >();
-    user.m_created_at = date::sys_seconds(date::days(in["created_at"].as< int >()));
+        user.m_created_at = date::sys_seconds(
+            std::chrono::seconds(in["created_at"].as< int >()));
 	user.m_type = StringToMessageType(in["type"].as< std::string >());
 	user.m_forward = in["forward"].as< bool >();
 	user.m_active = in["active"].as< bool >();
@@ -132,7 +133,7 @@ void Message::Deserialize(Walnut::StreamReader* deserializer,
 
     int created_at;
     deserializer->ReadRaw< int >(created_at);
-    instance.m_created_at = date::sys_seconds(date::days(created_at));
+    instance.m_created_at = date::sys_seconds(std::chrono::seconds(created_at));
 
     deserializer->ReadRaw< MessageType >(instance.m_type);
     deserializer->ReadRaw< bool >(instance.m_forward);

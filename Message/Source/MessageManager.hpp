@@ -22,7 +22,7 @@ public:
     int add_message(Message message);
     bool delete_message(int message_id);
     bool update_message(Message message);
-    Message get_message(int message_id);
+    std::optional< Message > get_message(int message_id);
     std::vector< Message > get_messages();
 
     std::optional< Message > send_message(int sender_id, int receiver_id,
@@ -32,6 +32,7 @@ public:
 
     void insert_messages(std::vector< Message > messages);
 
+    void clear_data();
 private:
     void save_messages();
     void load_messages();

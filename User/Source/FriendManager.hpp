@@ -36,7 +36,6 @@ public:
     bool is_friend(int user_1_id, int user_2_id);
     bool is_blocked(int user_1_id, int user_2_id);
     bool is_friend(int friend_id);
-
 private:
     void save_friends();
 	void load_friends();

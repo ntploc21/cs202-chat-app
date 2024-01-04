@@ -38,6 +38,10 @@ void ServerController::constructHandlers() {
         Handler::ID::Authenticate, Handler::ID::RetrieveAllGroups};
     m_packet_handlers[PacketType::RetrieveAllDMs] = {
         Handler::ID::Authenticate, Handler::ID::RetrieveAllDMs};
+    m_packet_handlers[PacketType::SendDirectMessage] = {
+        Handler::ID::Authenticate, Handler::ID::SendDirectMessage};
+    m_packet_handlers[PacketType::SendGroupMessage] = {
+        Handler::ID::Authenticate, Handler::ID::SendGroupMessage};
 }
 
 void ServerController::handlePacket(const Walnut::ClientInfo& client_info,

@@ -19,9 +19,12 @@ private:
 public:
     int add_direct_message(DirectMessage direct_message);
     int new_direct_message(int user_1_id, int user_2_id);
+
+    bool add_message(int direct_message_id, Message message);
+
     bool delete_direct_message(int direct_message_id);
     bool update_direct_message(DirectMessage direct_message);
-    DirectMessage get_direct_message(int direct_message_id);
+    std::optional< DirectMessage > get_direct_message(int direct_message_id);
     std::vector< DirectMessage > get_direct_messages();
     std::vector< DirectMessage > get_direct_messages(int user_id);
 
@@ -32,6 +35,7 @@ public:
 
     void load_direct_messages(std::vector< DirectMessage > direct_messages);
 
+    void clear_data();
 private:
     void save_direct_messages();
     void load_direct_messages();

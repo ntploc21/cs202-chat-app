@@ -70,6 +70,14 @@ std::optional< Message > ConversationManager::get_last_message(
     return m_conversations[pos].get_last_message();
 }
 
+bool ConversationManager::add_message(int conversation_id, Message message) {
+    int pos = findById(conversation_id);
+    if(pos == -1) return false;
+    MessageManager::getInstance().add_message(message);
+    m_conversations[pos].add_message(message);
+    return true;
+}
+
 std::optional< Message > ConversationManager::send_message(int sender_id,
                                                            int conversation_id,
                                                            Message message) {
@@ -78,8 +86,6 @@ std::optional< Message > ConversationManager::send_message(int sender_id,
 
     auto msg =
         m_conversations[pos].send_message(sender_id, message.get_content());
-    if (!msg.has_value()) return std::nullopt;
-
     return msg;
 }
 
@@ -91,7 +97,6 @@ std::optional< Message > ConversationManager::send_message(
     if (pos == -1) return std::nullopt;
 
     auto msg = m_conversations[pos].send_message(sender_id, message);
-    if (!msg.has_value()) return std::nullopt;
 
     return msg;
 }
@@ -110,6 +115,12 @@ void ConversationManager::insert_conversations(
     m_next_id = 0;
 }
 
+void ConversationManager::clear_data() {
+    if(!m_used_by_client) return;
+    m_conversations.clear();
+    m_next_id = 0;
+}
+
 void ConversationManager::save_conversations() {
     // output to m_conversations_file
 
@@ -117,7 +128,7 @@ void ConversationManager::save_conversations() {
 
     out << YAML::BeginSeq;
 
-    for (auto conversation : m_conversations) {
+    for (auto& conversation : m_conversations) {
         out << conversation;
     }
 
@@ -142,6 +153,8 @@ void ConversationManager::load_conversations() {
         return;
     }
 
+    std::cout << "huhu" << std::endl;
+
     YAML::Node doc = YAML::Load(fin);
 
     for (std::size_t i = 0; i < doc.size() - 1; i++) {
@@ -150,7 +163,11 @@ void ConversationManager::load_conversations() {
         m_conversations.push_back(conversation);
     }
 
+    std::cout << doc.size() << std::endl;
+
     m_next_id = doc[doc.size() - 1].as< int >();
+
+    std::cout << "_____" << std::endl;
 }
 
 int ConversationManager::findById(int id) {

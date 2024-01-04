@@ -147,6 +147,29 @@ enum class PacketType : uint16_t {
         */
     RetrieveAllGroups = 12,
 
+	/* -- SendDirectMessage --
+		[Client -> Server]
+		1. int dm_id
+		2. std::string message
+		
+		[Server -> Client]
+		1. bool success
+		2. std::string error_msg (if not success)
+		3. int dm_id
+		4. Message msg
+	*/
+	SendDirectMessage = 13,
+
+	/* -- SendGroupMessage --
+		[Client -> Server]
+		1. int group_id
+		2. std::string message
+							
+		[Server -> Client]
+		1. bool success
+		2. std::string error_msg (if not success)
+	*/
+	SendGroupMessage = 14,
 
 };
 

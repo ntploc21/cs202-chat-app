@@ -72,6 +72,12 @@ void GroupMessageManager::load_group_messages(
     m_next_id = 0;
 }
 
+void GroupMessageManager::clear_data() {
+    if(!m_used_by_client) return;
+    m_group_messages.clear();
+    m_next_id = 0;
+}
+
 void GroupMessageManager::save_group_messages() {
     // output to m_group_messages_file
 

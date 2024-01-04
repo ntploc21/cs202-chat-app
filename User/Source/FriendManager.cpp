@@ -36,12 +36,13 @@ std::optional< Friend > FriendManager::accept_friend(int user_1_id,
                                                      int user_2_id) {
     int pos = findById(user_1_id, user_2_id);
     if (pos == -1) return std::nullopt;
+    if (user_1_id == m_friends[pos].get_user_2_id() &&
+        !m_friends[pos].get_user_2_status()) {
+        m_friends[pos].set_user_1_status(1).set_user_2_status(1).set_note();
 
-    m_friends[pos].set_user_1_status(1).set_user_2_status(1).set_note();
-
-    
-
-    return m_friends[pos];
+        return m_friends[pos];
+    }
+    return std::nullopt;
 }
 
 bool FriendManager::decline_friend(int user_1_id, int user_2_id) {
@@ -123,6 +124,8 @@ std::vector< int > FriendManager::get_friends_id(int user_id) {
         if (friend_.get_user_1_id() != user_id &&
             friend_.get_user_2_id() != user_id)
             continue;
+
+        if(!friend_.get_user_1_status() || !friend_.get_user_2_status()) continue;
 
         int user_id_ = (friend_.get_user_1_id() == user_id)
                           ? friend_.get_user_2_id()

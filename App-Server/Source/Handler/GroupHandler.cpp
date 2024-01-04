@@ -6,6 +6,7 @@
 #include "Walnut/Serialization/BufferStream.h"
 
 RetrieveAllGroupsHandler::RetrieveAllGroupsHandler() {}
+SendGroupMessageHandler::SendGroupMessageHandler() {}
 
 void RetrieveAllGroupsHandler::handleImpl(const Walnut::ClientInfo& client_info,
                                           const PacketType packet_type,
@@ -47,3 +48,7 @@ void RetrieveAllGroupsHandler::handleImpl(const Walnut::ClientInfo& client_info,
         client_info.ID,
         Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
 }
+
+void SendGroupMessageHandler::handleImpl(const Walnut::ClientInfo& client_info,
+                                         const PacketType packet_type,
+                                         Walnut::BufferStreamReader& stream) {}

@@ -30,7 +30,7 @@ public:
 
     void load_group_messages(std::vector< GroupMessage > group_messages);
 
-
+    void clear_data();
 private:
 	void save_group_messages();
 	void load_group_messages();
