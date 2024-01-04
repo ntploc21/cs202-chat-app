@@ -4,6 +4,8 @@
 
 #include "AuthHandler.hpp"
 #include "FriendHandler.hpp"
+#include "DMHandler.hpp"
+#include "GroupHandler.hpp"
 
 ServerHandlerFactory::~ServerHandlerFactory() {}
 
@@ -28,9 +30,6 @@ ServerHandler* ServerHandlerFactory::createHandler(Handler::ID id) {
         case Handler::ID::RetrieveAllFriends:
             handler = new RetrieveAllFriendsHandler();
             break;
-        case Handler::ID::RetrieveAllGroups:
-            handler = new RetrieveAllGroupsHandler();
-            break;
         case Handler::ID::AddFriend:
             handler = new AddFriendHandler();
             break;
@@ -46,6 +45,12 @@ ServerHandler* ServerHandlerFactory::createHandler(Handler::ID id) {
         case Handler::ID::RetrievePendingFriendRequests:
             handler = new RetrievePendingFriendRequestsHandler();
             break;
+        case Handler::ID::RetrieveAllGroups:
+            handler = new RetrieveAllGroupsHandler();
+            break;
+        case Handler::ID::RetrieveAllDMs:
+            handler = new RetrieveAllDMsHandler();
+			break;
     }
     return handler;
 }

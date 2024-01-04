@@ -10,6 +10,8 @@
 #include "DirectMessage.hpp"
 #include "GroupMessage.hpp"
 
+#include "ServerPacket.hpp"
+
 class ClientLayer : public Walnut::Layer {
 private:
     enum class Tab { Default, Chat, Contact, Settings };
@@ -33,6 +35,10 @@ private:
     void UI_MainTab();
     void UI_UserList();
     void UI_MainCenter();
+    void UI_MainCenterDM();
+    void UI_MainCenterGroup();
+
+
     void UI_Info();
     void UI_UserInfo();
 
@@ -55,6 +61,9 @@ private:
 
     void ConnectToServer();
     void LoginToServer();
+
+    // Send no argument packet
+    void SendPacket(PacketType packet_type);
 
 private:
     std::unique_ptr< Walnut::Client > m_client{};
@@ -95,12 +104,10 @@ private:
 
     const std::string m_saved_credentials_file{"credentials.yaml"};
 
-    std::vector< User > m_users{};
     std::vector< User > m_friends{};
     std::vector< User > m_pending_friends{};
-    std::vector< std::string > m_pending_friend_notes{};
 
-    std::map< int, int > m_friend_option{};
+    std::vector< std::string > m_pending_friend_notes{};
     std::map< int, std::string > m_user_notes{};
 
     User m_profile_user{};
@@ -111,12 +118,10 @@ private:
         int id;
         date::sys_seconds m_last_message_at{};
 
-        bool operator<(const Chat& other) const {
+        /*bool operator<(const Chat& other) const {
             return m_last_message_at > other.m_last_message_at;
-        }
+        }*/
     };
 
-    std::vector< Chat > m_chat{};
-    std::vector< DirectMessage > m_direct_message {};
-    std::vector< GroupMessage > m_group {};
+    Chat m_chat{};
 };

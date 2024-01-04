@@ -36,6 +36,9 @@ public:
 
 	bool is_pin_message(int message_id) const;
 
+	void set_user_last_seen_at(int user_id, date::sys_seconds last_seen_at);
+	date::sys_seconds get_user_last_seen_at(int user_id) const;
+
 	friend std::ostream& operator<<(std::ostream& out,
 						const DirectMessage& direct_message);
 
@@ -45,18 +48,27 @@ public:
 	static void Deserialize(Walnut::StreamReader* deserializer,
 						DirectMessage& instance);
 
+	friend YAML::Emitter& operator<<(YAML::Emitter& out, const DirectMessage& direct_message);
+
+	friend void operator>>(const YAML::Node& in, DirectMessage& direct_message);
+
 public:
 	std::optional< Message > send_message(int sender_id, Message message) const;
-	std::optional< Message> send_message(int sender_id, std::string message) const;
+	std::optional< Message > send_message(int sender_id, std::string message) const;
 
-private:
+public:
 	int m_dm_id{};
 	int m_conversation_id{};
 	int m_user_id_1{};
 	int m_user_id_2{};
 	std::string m_user_1_nickname{};
 	std::string m_user_2_nickname{};
+
 	std::vector<int> m_pin_message_list{};
+
+	date::sys_seconds m_user_1_last_seen_at{};
+	date::sys_seconds m_user_2_last_seen_at{};
+
 	// images
 	// attachments
 };

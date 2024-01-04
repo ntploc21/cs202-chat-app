@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "../ClientManager.hpp"
+#include "DirectMessageManager.hpp"
 #include "FriendManager.hpp"
 #include "User-Utils.hpp"
 #include "UserManager.hpp"
@@ -10,7 +11,6 @@
 
 RetrieveAllUsersHandler::RetrieveAllUsersHandler() {}
 RetrieveAllFriendsHandler::RetrieveAllFriendsHandler() {}
-RetrieveAllGroupsHandler::RetrieveAllGroupsHandler() {}
 AddFriendHandler::AddFriendHandler() {}
 AcceptFriendHandler::AcceptFriendHandler() {}
 DeclineFriendHandler::DeclineFriendHandler() {}
@@ -28,10 +28,6 @@ void RetrieveAllFriendsHandler::handleImpl(
     Walnut::BufferStreamReader& stream) {
     SendAllFriends(client_info.ID, packet_type, stream, m_server);
 }
-
-void RetrieveAllGroupsHandler::handleImpl(const Walnut::ClientInfo& client_info,
-                                          const PacketType packet_type,
-                                          Walnut::BufferStreamReader& stream) {}
 
 void AddFriendHandler::handleImpl(const Walnut::ClientInfo& client_info,
                                   const PacketType packet_type,
@@ -78,11 +74,19 @@ void AcceptFriendHandler::handleImpl(const Walnut::ClientInfo& client_info,
     int friend_id;
     stream.ReadRaw< int >(friend_id);
 
-    if (!FriendManager::getInstance()
-             .accept_friend(user_id, friend_id)
-             .has_value()) {
+    auto friend_ =
+        FriendManager::getInstance().accept_friend(user_id, friend_id);
+
+    if (!friend_.has_value()) {
         // send error ...
         return;
+    }
+
+    if (friend_.value().get_conversation_id() == -1) {
+        int dm_id = DirectMessageManager::getInstance().new_direct_message(
+            user_id, friend_id);
+        FriendManager::getInstance().set_direct_message_id(user_id, friend_id,
+                                                           dm_id);
     }
 
     auto client_friend = ClientManager::getInstance().getClientID(friend_id);
@@ -100,6 +104,7 @@ void AcceptFriendHandler::handleImpl(const Walnut::ClientInfo& client_info,
     SendPendingFriendRequests(client_info.ID,
                               PacketType::RetrievePendingFriendRequests, stream,
                               m_server);
+
     SendSuccess(client_info.ID, packet_type, stream, m_server);
 }
 

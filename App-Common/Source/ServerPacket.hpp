@@ -59,7 +59,8 @@ enum class PacketType : uint16_t {
 		[Client -> Server]
 
 		[Server -> Client]
-		1. std::vector< User >
+		1. success
+		2. std::vector< User >
 	*/
 	RetrieveAllUsers = 4,
 
@@ -67,18 +68,10 @@ enum class PacketType : uint16_t {
 		[Client -> Server]
 		
 		[Server -> Client]
-		1. std::vector< User >
+		1. success
+		2. std::vector< User >
 	*/
 	RetrieveAllFriends = 5,
-
-	/* -- RetrieveAllGroups --
-		[Client -> Server]
-
-		[Server -> Client]
-		std::vector<GroupMessage>
-	
-	*/
-	RetrieveAllGroups = 6,
 
 	/* -- AddFriend --
 		[Client -> Server]
@@ -89,7 +82,7 @@ enum class PacketType : uint16_t {
 		1. bool success
 		2. std::string error_msg (if not success)
 	*/
-	AddFriend = 7,
+	AddFriend = 6,
 
 	/* -- AcceptFriend --
 		[Client -> Server]
@@ -99,7 +92,7 @@ enum class PacketType : uint16_t {
 		1. bool success
 		2. std::string error_msg (if not success)
 	*/
-	AcceptFriend = 8,
+	AcceptFriend = 7,
 
 	/* -- DeclineFriend --
 		[Client -> Server]
@@ -109,7 +102,7 @@ enum class PacketType : uint16_t {
 		1. bool success
 		2. std::string error_msg (if not success)
 	*/
-	DeclineFriend = 9,
+	DeclineFriend = 8,
 
 	/* -- Unfriend --
 		[Client -> Server]
@@ -119,9 +112,9 @@ enum class PacketType : uint16_t {
 		1. bool success
 		2. std::string error_msg (if not success)
 	*/
-	Unfriend = 10,
+	Unfriend = 9,
 
-	/* -- RetrievePendingFriendRequests
+	/* -- RetrievePendingFriendRequests --
 		[Client -> Server]
 
 		[Server -> Client]
@@ -129,7 +122,31 @@ enum class PacketType : uint16_t {
 		2. std::vector< User >
 		3. std::vector< std::string >
 	*/
-	RetrievePendingFriendRequests = 11,
+    RetrievePendingFriendRequests = 10,
+
+	/* -- RetrieveAllDirectMessages --
+		[Client -> Server]
+		1. int dm_id
+
+		[Server -> Client]
+		1. bool success
+		2. vector<DirectMessage>
+		3. vector<Conversation>
+		4. vector<Message>
+	*/
+    RetrieveAllDMs = 11,
+
+    /* -- RetrieveAllGroups --
+        [Client -> Server]
+
+        [Server -> Client]
+        1. success
+        2. std::vector<GroupMessage>
+        3. std::vector<Conversation>
+        4. std::vector<Message>
+        */
+    RetrieveAllGroups = 12,
+
 
 };
 

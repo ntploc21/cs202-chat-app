@@ -9,6 +9,7 @@ project "Message"
 
    includedirs
    {
+	   "../User/Source",
       "../App-Common/Source",
       "../User/Source",
 
@@ -23,7 +24,9 @@ project "Message"
       "../Walnut/vendor/spdlog/include",
       "../Walnut/vendor/yaml-cpp/include",
 
-      "../Walnut-Networking/vendor/GameNetworkingSockets/include"
+      "../Walnut-Networking/vendor/GameNetworkingSockets/include",
+
+      "../date/include/",
    }
 
    links

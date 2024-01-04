@@ -4,6 +4,18 @@
 
 GroupMessage::GroupMessage() {}
 
+GroupMessage::GroupMessage(int group_id, int conversation_id,
+                           std::string group_name,
+                           std::vector< int > member_list) {
+    m_group_id = group_id;
+    m_conversation_id = conversation_id;
+    m_group_name = group_name;
+    m_member_list = member_list;
+
+    assert(m_member_list.size() > 0);
+    m_admin_list.push_back(m_member_list[0]);
+}
+
 GroupMessage& GroupMessage::set_group_id(int group_id) {
     m_group_id = group_id;
     return *this;
@@ -189,6 +201,72 @@ std::ostream& operator<<(std::ostream& out, const GroupMessage& group_message) {
         << "}";
 
     return out;
+}
+
+YAML::Emitter& operator<<(YAML::Emitter& out,
+                          const GroupMessage& group_message) {
+    out << YAML::BeginMap;
+
+    out << YAML::Key << "group_id" << YAML::Value << group_message.m_group_id;
+
+    out << YAML::Key << "conversation_id" << YAML::Value
+        << group_message.m_conversation_id;
+
+    out << YAML::Key << "group_name" << YAML::Value
+        << group_message.m_group_name;
+
+    out << YAML::Key << "member_list" << YAML::Value << YAML::BeginSeq;
+    for (int i = 0; i < group_message.m_member_list.size(); i++) {
+        out << group_message.m_member_list[i];
+    }
+    out << YAML::EndSeq;
+
+    out << YAML::Key << "admin_list" << YAML::Value << YAML::BeginSeq;
+    for (int i = 0; i < group_message.m_admin_list.size(); i++) {
+        out << group_message.m_admin_list[i];
+    }
+    out << YAML::EndSeq;
+
+    out << YAML::Key << "nickname_list" << YAML::Value << YAML::BeginSeq;
+    for (auto& [key, value] : group_message.m_nickname_list) {
+        out << YAML::BeginSeq << key << value << YAML::EndSeq;
+    }
+    out << YAML::EndMap;
+
+    out << YAML::Key << "pin_message_list" << YAML::Value << YAML::BeginSeq;
+    for (int i = 0; i < group_message.m_pin_message_list.size(); i++) {
+        out << group_message.m_pin_message_list[i];
+    }
+    out << YAML::EndSeq;
+
+    out << YAML::EndMap;
+
+    return out;
+}
+
+void operator>>(const YAML::Node& in, GroupMessage& group_message) {
+    group_message.m_group_id = in["group_id"].as< int >();
+    group_message.m_conversation_id = in["conversation_id"].as< int >();
+    group_message.m_group_name = in["group_name"].as< std::string >();
+
+    for (int i = 0; i < in["member_list"].size(); i++) {
+        group_message.m_member_list.push_back(in["member_list"][i].as< int >());
+    }
+
+    for (int i = 0; i < in["admin_list"].size(); i++) {
+        group_message.m_admin_list.push_back(in["admin_list"][i].as< int >());
+    }
+
+    for (int i = 0; i < in["nickname_list"].size(); i++) {
+        group_message.m_nickname_list[in["nickname_list"][i][0].as< int >()] =
+            in["nickname_list"][i][1].as< std::string >();
+    }
+
+    group_message.m_pin_message_list.clear();
+    for (int i = 0; i < in["pin_message_list"].size(); i++) {
+        group_message.m_pin_message_list.push_back(
+            in["pin_message_list"][i].as< int >());
+    }
 }
 
 void GroupMessage::Serialize(Walnut::StreamWriter* serializer,

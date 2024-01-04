@@ -21,6 +21,7 @@ public:
     bool decline_friend(int user_1_id, int user_2_id);
     bool unfriend(int user_1_id, int user_2_id);
     bool block(int user_1_id, int user_2_id);
+    std::optional< Friend > set_direct_message_id(int user_1_id, int user_2_id, int conversation_id);
     
     std::optional< Friend > get_friend(int friend_id);
     std::optional< Friend > get_friend(int user_1_id, int user_2_id);

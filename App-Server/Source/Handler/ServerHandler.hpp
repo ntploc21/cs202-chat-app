@@ -14,12 +14,13 @@ namespace Handler {
         ClientLogout,
         RetrieveAllUsers,
         RetrieveAllFriends,
-        RetrieveAllGroups,
         AddFriend,
         AcceptFriend,
         DeclineFriend,
         Unfriend,
         RetrievePendingFriendRequests,
+        RetrieveAllDMs,
+        RetrieveAllGroups
     };
 };
 

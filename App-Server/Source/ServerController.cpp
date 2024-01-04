@@ -24,8 +24,6 @@ void ServerController::constructHandlers() {
         Handler::ID::Authenticate, Handler::ID::RetrieveAllUsers};
     m_packet_handlers[PacketType::RetrieveAllFriends] = {
         Handler::ID::Authenticate, Handler::ID::RetrieveAllFriends};
-    m_packet_handlers[PacketType::RetrieveAllGroups] = {
-        Handler::ID::Authenticate, Handler::ID::RetrieveAllGroups};
     m_packet_handlers[PacketType::AddFriend] = {Handler::ID::Authenticate,
                                                 Handler::ID::AddFriend};
     m_packet_handlers[PacketType::AcceptFriend] = {Handler::ID::Authenticate,
@@ -36,6 +34,10 @@ void ServerController::constructHandlers() {
                                                Handler::ID::Unfriend};
     m_packet_handlers[PacketType::RetrievePendingFriendRequests] = {
         Handler::ID::Authenticate, Handler::ID::RetrievePendingFriendRequests};
+    m_packet_handlers[PacketType::RetrieveAllGroups] = {
+        Handler::ID::Authenticate, Handler::ID::RetrieveAllGroups};
+    m_packet_handlers[PacketType::RetrieveAllDMs] = {
+        Handler::ID::Authenticate, Handler::ID::RetrieveAllDMs};
 }
 
 void ServerController::handlePacket(const Walnut::ClientInfo& client_info,

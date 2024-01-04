@@ -15,8 +15,12 @@ std::string_view PacketTypeToString(PacketType type) {
             return "PacketType::RetrieveAllUsers";
         case PacketType::RetrieveAllFriends:
             return "PacketType::RetrieveAllFriends";
+        case PacketType::RetrievePendingFriendRequests:
+			return "PacketType::RetrievePendingFriendRequests";
         case PacketType::RetrieveAllGroups:
             return "PacketType::RetrieveAllGroups";
+        case PacketType::RetrieveAllDMs:
+            return "PacketType::RetrieveAllDMs";
     }
 
     return "PacketType::<Invalid>";

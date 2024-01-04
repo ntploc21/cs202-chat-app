@@ -4,15 +4,18 @@
 
 UserManager::UserManager() { load_users(); }
 
-UserManager::~UserManager() { save_users(); }
+UserManager::~UserManager() {
+    if(!m_used_by_client) save_users();
+}
 
 int UserManager::add_user(User user) {
     int user_pos = findByUsername(user.get_username());
     if (user_pos != -1) return m_users[user_pos].get_user_id();
 
-    user.set_user_id(++m_next_id);
+    if(!m_used_by_client) user.set_user_id(++m_next_id);
     m_users.push_back(user);
-    return m_next_id;
+    if(!m_used_by_client) return m_next_id;
+    return user.get_user_id();
 }
 
 bool UserManager::delete_user(int user_id) {
@@ -73,6 +76,18 @@ bool UserManager::exists(int user_id) {
     return false;
 }
 
+void UserManager::set_used_by_client() {
+    m_users.clear();
+    m_next_id = 0;
+    m_used_by_client = true;
+}
+
+void UserManager::load_users(std::vector< User > users) {
+    if(!m_used_by_client) return;
+    m_users = users;
+	m_next_id = 0;
+}
+
 std::vector< User > UserManager::get_users() { return m_users; }
 
 void UserManager::save_users() {
@@ -90,7 +105,7 @@ void UserManager::save_users() {
 
     out << YAML::EndSeq;
 
-    std::ofstream fout(m_users_file);
+    std::ofstream fout(m_users_file.data());
 
     fout << out.c_str();
 
@@ -100,7 +115,7 @@ void UserManager::save_users() {
 void UserManager::load_users() {
     // input from m_users_file
 
-    std::ifstream fin(m_users_file);
+    std::ifstream fin(m_users_file.data());
 
     if (!fin.is_open()) {
         std::cout << "File not found!\n";

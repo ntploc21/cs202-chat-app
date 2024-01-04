@@ -109,6 +109,26 @@ bool DirectMessage::is_pin_message(int message_id) const {
                      message_id) != m_pin_message_list.end();
 }
 
+void DirectMessage::set_user_last_seen_at(int user_id,
+                                          date::sys_seconds last_seen_at) {
+    if (user_id == m_user_id_1) {
+        m_user_1_last_seen_at = last_seen_at;
+    } else if (user_id == m_user_id_2) {
+        m_user_2_last_seen_at = last_seen_at;
+    } else {
+        throw std::invalid_argument("User id is not in this conversation");
+    }
+}
+
+date::sys_seconds DirectMessage::get_user_last_seen_at(int user_id) const {
+    if (user_id == m_user_id_1) {
+        return m_user_1_last_seen_at;
+    } else if (user_id == m_user_id_2) {
+        return m_user_2_last_seen_at;
+    }
+    throw std::invalid_argument("User id is not in this conversation");
+}
+
 std::ostream& operator<<(std::ostream& out,
                          const DirectMessage& direct_message) {
     out << "DirectMessage {";
@@ -127,8 +147,68 @@ std::ostream& operator<<(std::ostream& out,
         }
     }
     out << "]\n";
+
+    out << "\n\tm_user_1_last_seen_at: "
+		<< direct_message.m_user_1_last_seen_at;
+
+    out << "\n\tm_user_2_last_seen_at: "
+        << direct_message.m_user_2_last_seen_at;
+
     out << "}";
     return out;
+}
+
+YAML::Emitter& operator<<(YAML::Emitter& out,
+                          const DirectMessage& direct_message) {
+    out << YAML::BeginMap;
+
+    out << YAML::Key << "dm_id" << YAML::Value << direct_message.m_dm_id;
+
+    out << YAML::Key << "conversation_id" << YAML::Value
+        << direct_message.m_conversation_id;
+
+    out << YAML::Key << "user_id_1" << YAML::Value
+        << direct_message.m_user_id_1;
+
+    out << YAML::Key << "user_id_2" << YAML::Value
+        << direct_message.m_user_id_2;
+
+    out << YAML::Key << "user_1_nickname" << YAML::Value
+        << direct_message.m_user_1_nickname;
+
+    out << YAML::Key << "user_2_nickname" << YAML::Value
+        << direct_message.m_user_2_nickname;
+
+    out << YAML::Key << "pin_message_list" << YAML::Value
+        << direct_message.m_pin_message_list;
+
+    out << YAML::Key << "user_1_last_seen_at" << YAML::Value
+		<< direct_message.m_user_1_last_seen_at.time_since_epoch().count();
+
+    out << YAML::Key << "user_2_last_seen_at" << YAML::Value
+		<< direct_message.m_user_2_last_seen_at.time_since_epoch().count();
+
+    out << YAML::EndMap;
+
+    return out;
+}
+
+void operator>>(const YAML::Node& in, DirectMessage& direct_message) {
+    direct_message.m_dm_id = in["dm_id"].as< int >();
+    direct_message.m_conversation_id = in["conversation_id"].as< int >();
+    direct_message.m_user_id_1 = in["user_id_1"].as< int >();
+    direct_message.m_user_id_2 = in["user_id_2"].as< int >();
+    direct_message.m_user_1_nickname =
+        in["user_1_nickname"].as< std::string >();
+    direct_message.m_user_2_nickname =
+        in["user_2_nickname"].as< std::string >();
+
+    direct_message.m_pin_message_list =
+        in["pin_message_list"].as< std::vector< int > >();
+
+    direct_message.m_user_1_last_seen_at = date::sys_seconds(date::days(in["user_1_last_seen_at"].as< int >()));
+
+    direct_message.m_user_2_last_seen_at = date::sys_seconds(date::days(in["user_2_last_seen_at"].as< int >()));
 }
 
 void DirectMessage::Serialize(Walnut::StreamWriter* serializer,
@@ -140,6 +220,8 @@ void DirectMessage::Serialize(Walnut::StreamWriter* serializer,
     serializer->WriteString(instance.m_user_1_nickname);
     serializer->WriteString(instance.m_user_2_nickname);
     serializer->WriteArray(instance.m_pin_message_list);
+    serializer->WriteRaw< int >(instance.m_user_1_last_seen_at.time_since_epoch().count());
+    serializer->WriteRaw< int >(instance.m_user_2_last_seen_at.time_since_epoch().count());
 }
 
 void DirectMessage::Deserialize(Walnut::StreamReader* deserializer,
@@ -151,6 +233,14 @@ void DirectMessage::Deserialize(Walnut::StreamReader* deserializer,
     deserializer->ReadString(instance.m_user_1_nickname);
     deserializer->ReadString(instance.m_user_2_nickname);
     deserializer->ReadArray(instance.m_pin_message_list);
+
+    int user_1_last_seen_at;
+    deserializer->ReadRaw< int >(user_1_last_seen_at);
+    instance.m_user_1_last_seen_at = date::sys_seconds(date::days(user_1_last_seen_at));
+
+    int user_2_last_seen_at;
+    deserializer->ReadRaw< int >(user_2_last_seen_at);
+    instance.m_user_2_last_seen_at = date::sys_seconds(date::days(user_2_last_seen_at));
 }
 
 std::optional< Message > DirectMessage::send_message(int sender_id,
@@ -163,12 +253,12 @@ std::optional< Message > DirectMessage::send_message(int sender_id,
         sender_id, m_conversation_id, message);
 }
 
-std::optional< Message > DirectMessage::send_message(int sender_id,
-    													 std::string message) const {
-	if (sender_id != m_user_id_1 && sender_id != m_user_id_2) {
-    		return std::nullopt;
-    	}
+std::optional< Message > DirectMessage::send_message(
+    int sender_id, std::string message) const {
+    if (sender_id != m_user_id_1 && sender_id != m_user_id_2) {
+        return std::nullopt;
+    }
 
-	return ConversationManager::getInstance().send_message(
-    		sender_id, m_conversation_id, message);
+    return ConversationManager::getInstance().send_message(
+        sender_id, m_conversation_id, message);
 }

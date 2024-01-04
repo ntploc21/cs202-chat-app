@@ -5,9 +5,14 @@
 #include <filesystem>
 #include <iostream>
 
+#include "ConversationManager.hpp"
+#include "DirectMessageManager.hpp"
+#include "GroupMessageManager.hpp"
 #include "IconsFontAwesome5.h"
+#include "MessageManager.hpp"
 #include "ServerPacket.hpp"
 #include "Session.hpp"
+#include "UserManager.hpp"
 #include "Walnut/Application.h"
 #include "Walnut/ApplicationGUI.h"
 #include "Walnut/Networking/NetworkingUtils.h"
@@ -29,6 +34,12 @@ void ClientLayer::OnAttach() {
     // ImGui::StyleColorsLight();
 
     m_test_avt = std::make_shared< Walnut::Image >("Image/test.png");
+
+    UserManager::getInstance().set_used_by_client();
+    MessageManager::getInstance().set_used_by_client();
+    ConversationManager::getInstance().set_used_by_client();
+    DirectMessageManager::getInstance().set_used_by_client();
+    GroupMessageManager::getInstance().set_used_by_client();
 
     LoadCredentials();
 }
@@ -416,6 +427,67 @@ void ClientLayer::UI_UserList() {
         if (ImGui::BeginTabItem("Inbox")) {
             // design an inbox that looks similar to messenger inbox
 
+            std::vector< DirectMessage > direct_messages =
+                DirectMessageManager::getInstance().get_direct_messages();
+
+            for (auto& direct_message : direct_messages) {
+                if (direct_message.get_user_id_2() ==
+                    m_current_user.get_user_id()) {
+                    std::swap(direct_message.m_user_id_1,
+                              direct_message.m_user_id_2);
+                    std::swap(direct_message.m_user_1_nickname,
+                              direct_message.m_user_2_nickname);
+                }
+
+                ImGui::BeginGroup();
+
+                ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
+                ImGui::SameLine();
+
+                ImGui::BeginGroup();
+
+                ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+                std::string_view name{direct_message.m_user_2_nickname};
+
+                ImGui::Text(name.data());
+
+                ImGui::PopFont();
+
+                auto message =
+                    ConversationManager::getInstance().get_last_message(
+                        direct_message.get_conversation_id());
+
+                if (message.has_value()) {
+                    ImGui::Text(message.value().m_content.c_str());
+                    ImGui::SameLine();
+
+                    ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+                    ImGui::BulletText("(10:00 AM)");
+                    ImGui::PopFont();
+
+                } else {
+                    ImGui::Text("No message");
+                }
+
+                ImGui::EndGroup();
+
+                ImGui::EndGroup();
+
+                // if hover, change the mouse cursor to hand
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                }
+
+                // if clicked, change the chat to this chat
+                if (ImGui::IsItemClicked()) {
+                    std::cout << "hello" << std::endl;
+                    // m_current_chat = direct_message;
+                }
+
+                ImGui::Separator();
+            }
+
             {
                 ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
                 ImGui::SameLine();
@@ -434,6 +506,8 @@ void ClientLayer::UI_UserList() {
                 ImGui::PopFont();
 
                 ImGui::EndGroup();
+
+                ImGui::Separator();
             }
 
             ImGui::EndTabItem();
@@ -454,9 +528,12 @@ void ClientLayer::UI_MainCenter() {
     ImGui::Begin("Main Chat", &open,
                  ImGuiWindowFlags_NoDecoration | ImGuiDockNodeFlags_NoTabBar);
 
-    // add a header that contains the name of the avatar, the name and the
-    // status
+    UI_MainCenterDM();
 
+    ImGui::End();
+}
+
+void ClientLayer::UI_MainCenterDM() {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
@@ -677,9 +754,9 @@ void ClientLayer::UI_MainCenter() {
             reclaim_focus = true;
         }
     }
-
-    ImGui::End();
 }
+
+void ClientLayer::UI_MainCenterGroup() {}
 
 void ClientLayer::UI_Info() {
     ImGui::SetNextWindowSize(ImVec2(350, 800), ImGuiCond_FirstUseEver);
@@ -1440,7 +1517,8 @@ void ClientLayer::UI_FriendsRequest() {
 
         const float TextPadding = 8.0f;
 
-        for (auto user : m_users) {
+        std::vector< User > users = UserManager::getInstance().get_users();
+        for (auto user : users) {
             if (user.get_user_id() == m_current_user.get_user_id()) continue;
             // if user is a friend, skip
             if (std::find(m_friends.begin(), m_friends.end(), user) !=
@@ -1576,6 +1654,13 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
     stream.ReadRaw< PacketType >(type);
 
     bool success;
+    std::vector< User > users;
+    std::vector< GroupMessage > group_messages;
+    std::vector< DirectMessage > direct_messages;
+    std::vector< Conversation > conversations;
+    std::vector< Message > messages;
+
+    std::cout << PacketTypeToString(type) << std::endl;
 
     switch (type) {
         case PacketType::ClientRegisterRequest:
@@ -1592,23 +1677,12 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
             }
 
             stream.ReadObject(m_current_user);
-            out_stream.WriteRaw< PacketType >(PacketType::RetrieveAllUsers);
 
-            m_client->SendBuffer(out_stream.GetBuffer());
-
-            // reset the stream and use it to send retrieve pending friend
-            // requests
-            out_stream.SetStreamPosition(0);
-            out_stream.WriteRaw< PacketType >(
-                PacketType::RetrievePendingFriendRequests);
-
-            m_client->SendBuffer(out_stream.GetBuffer());
-
-            // reset the stream and use it to send retrieve all friends
-            out_stream.SetStreamPosition(0);
-            out_stream.WriteRaw< PacketType >(PacketType::RetrieveAllFriends);
-
-            m_client->SendBuffer(out_stream.GetBuffer());
+            SendPacket(PacketType::RetrieveAllUsers);
+            SendPacket(PacketType::RetrieveAllFriends);
+            SendPacket(PacketType::RetrievePendingFriendRequests);
+            SendPacket(PacketType::RetrieveAllGroups);
+            SendPacket(PacketType::RetrieveAllDMs);
 
             m_current_tab = Tab::Chat;
 
@@ -1651,11 +1725,9 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
                 break;
             }
 
-            stream.ReadArray(m_users);
+            stream.ReadArray(users);
 
-            for (auto user : m_users) {
-                std::cout << user << std::endl;
-            }
+            UserManager::getInstance().load_users(users);
 
             break;
         case PacketType::RetrieveAllFriends:
@@ -1675,9 +1747,6 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
             for (auto user : m_friends) {
                 std::cout << user << std::endl;
             }
-
-            break;
-        case PacketType::RetrieveAllGroups:
 
             break;
         case PacketType::AddFriend:
@@ -1711,6 +1780,64 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
             stream.ReadArray(m_pending_friends);
 
             stream.ReadArray(m_pending_friend_notes);
+
+            break;
+        case PacketType::RetrieveAllGroups:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadArray(group_messages);
+            stream.ReadArray(conversations);
+            stream.ReadArray(messages);
+
+            GroupMessageManager::getInstance().load_group_messages(
+                group_messages);
+            ConversationManager::getInstance().insert_conversations(
+                conversations);
+            MessageManager::getInstance().insert_messages(messages);
+
+            std::cout << "Group" << std::endl;
+
+            for (auto group : group_messages) {
+                std::cout << group << std::endl;
+            }
+
+            break;
+        case PacketType::RetrieveAllDMs:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadArray(direct_messages);
+            stream.ReadArray(conversations);
+            stream.ReadArray(messages);
+
+            DirectMessageManager::getInstance().load_direct_messages(
+                direct_messages);
+            ConversationManager::getInstance().insert_conversations(
+                conversations);
+            MessageManager::getInstance().insert_messages(messages);
+
+            /*std::cout << "DM" << std::endl;
+
+            for (auto dm : direct_messages) {
+                std::cout << dm << std::endl;
+            }*/
 
             break;
     }
@@ -1797,4 +1924,17 @@ void ClientLayer::LoginToServer() {
     m_client->SendBuffer(stream.GetBuffer());
 
     ImGui::CloseCurrentPopup();
+}
+
+void ClientLayer::SendPacket(PacketType packet_type) {
+    Walnut::Buffer scratch_buffer;
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+    stream.WriteRaw< PacketType >(packet_type);
+
+    std::cout << "Sending packet " << PacketTypeToString(packet_type)
+              << std::endl;
+
+    m_client->SendBuffer(stream.GetBuffer());
 }

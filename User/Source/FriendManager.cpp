@@ -39,6 +39,8 @@ std::optional< Friend > FriendManager::accept_friend(int user_1_id,
 
     m_friends[pos].set_user_1_status(1).set_user_2_status(1).set_note();
 
+    
+
     return m_friends[pos];
 }
 
@@ -76,6 +78,17 @@ bool FriendManager::block(int user_1_id, int user_2_id) {
     m_blacklist.push_back(friend_);
 
     return true;
+}
+
+std::optional< Friend > FriendManager::set_direct_message_id(
+    int user_1_id, int user_2_id,
+                                          int conversation_id) {
+	int pos = findById(user_1_id, user_2_id);
+    if (pos == -1) return std::nullopt;
+
+    m_friends[pos].set_conversation_id(conversation_id);
+
+    return m_friends[pos];
 }
 
 std::optional< Friend > FriendManager::get_friend(int friend_id) {

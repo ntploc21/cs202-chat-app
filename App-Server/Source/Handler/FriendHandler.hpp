@@ -24,16 +24,6 @@ private:
                     Walnut::BufferStreamReader& stream) override;
 };
 
-class RetrieveAllGroupsHandler : public ServerHandler {
-public:
-    RetrieveAllGroupsHandler();
-
-private:
-    void handleImpl(const Walnut::ClientInfo& client_info,
-                    const PacketType packet_type,
-                    Walnut::BufferStreamReader& stream) override;
-};
-
 class AddFriendHandler : public ServerHandler {
 public:
     AddFriendHandler();

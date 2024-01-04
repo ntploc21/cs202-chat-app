@@ -4,6 +4,9 @@
 #include "Walnut/Serialization/StreamReader.h"
 #include "Walnut/Serialization/StreamWriter.h"
 
+#include "yaml-cpp/yaml.h"
+#include "date/date.h"
+
 enum class MessageType : uint16_t {
     None = 0, // invalid
     Text = 1,
@@ -43,12 +46,18 @@ public:
     static void Deserialize(Walnut::StreamReader* deserializer,
                             Message& instance);
 
+    friend YAML::Emitter& operator<<(YAML::Emitter& out, const Message& user);
+
+    friend void operator>>(const YAML::Node& in, Message& user);
+
 public:
     int m_msg_id{};
     int m_from_id{}; // foreign key from user
     int m_to_conversation_id{}; // foreign key from conversation
     std::string m_content{};
-    // date sent_date
+    
+    date::sys_seconds m_created_at{};
+    
     MessageType m_type{};
     bool m_forward {};
     bool m_active {};
@@ -56,3 +65,4 @@ public:
 };
 
 std::string_view MessageTypeToString(MessageType type);
+MessageType StringToMessageType(std::string_view type);

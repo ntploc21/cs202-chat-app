@@ -16,6 +16,7 @@ public:
 
     std::vector< int > get_messages_id() const;
     std::vector< Message > get_messages() const;
+    std::optional< Message > get_last_message() const;
 
     Conversation& add_message(int message_id);
     Conversation& add_message(Message message);
@@ -36,7 +37,13 @@ public:
     static void Deserialize(Walnut::StreamReader* deserializer,
                             Conversation& instance);
 
+    friend YAML::Emitter& operator<<(YAML::Emitter& out,
+                                     const Conversation& conversation);
+
+    friend void operator>>(const YAML::Node& in, Conversation& conversation);
+
 private:
     int m_conversation_id{};
     std::vector< int > m_messages{};  // contains message ids
+    date::sys_seconds m_last_msg_at{};
 };

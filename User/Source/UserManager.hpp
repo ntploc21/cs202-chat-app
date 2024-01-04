@@ -41,6 +41,10 @@ public:
     bool exists(std::string_view username);
     bool exists(int user_id);
 
+    void set_used_by_client();
+    
+    void load_users(std::vector< User > users);
+
 private:
     void save_users();
     void load_users();
@@ -52,5 +56,7 @@ private:
     std::vector< User > m_users{};
     int m_next_id{0};
 
-    const std::string m_users_file{"users.yaml"};
+    std::string_view m_users_file{"users.yaml"};
+
+    bool m_used_by_client = false;
 };
