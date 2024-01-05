@@ -45,6 +45,8 @@ public:
     
     void load_users(std::vector< User > users);
 
+    bool set_online(int user_id, bool online);
+
     void clear_data();
 private:
     void save_users();

@@ -1,7 +1,9 @@
 #include "Message.hpp"
 
 Message::Message() {
-    m_created_at = date::floor< date::days >(std::chrono::system_clock::now());
+    // store the current seconds since epoch
+    m_created_at = date::floor< std::chrono::duration< int > >(
+    		std::chrono::system_clock::now());
 }
 
 Message::Message(int msg_id, int from_id, int to_conversation_id,
@@ -10,7 +12,8 @@ Message::Message(int msg_id, int from_id, int to_conversation_id,
     : m_msg_id(msg_id), m_from_id(from_id),
       m_to_conversation_id(to_conversation_id), m_content(content),
       m_type(type), m_forward(forward), m_active(active) {
-    m_created_at = date::floor< date::days >(std::chrono::system_clock::now());
+    m_created_at = date::floor< std::chrono::duration< int > >(
+        std::chrono::system_clock::now());
 }
 
 int Message::get_msg_id() const { return m_msg_id; }

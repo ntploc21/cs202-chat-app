@@ -20,20 +20,34 @@ public:
     int add_direct_message(DirectMessage direct_message);
     int new_direct_message(int user_1_id, int user_2_id);
 
+
     bool add_message(int direct_message_id, Message message);
+    bool delete_message(int direct_message_id, int message_id);
 
     bool delete_direct_message(int direct_message_id);
     bool update_direct_message(DirectMessage direct_message);
     std::optional< DirectMessage > get_direct_message(int direct_message_id);
+    std::optional< DirectMessage > get_direct_message(int user_1_id, int user_2_id);
     std::vector< DirectMessage > get_direct_messages();
     std::vector< DirectMessage > get_direct_messages(int user_id);
 
     std::optional< Message > send_message(int sender_id, int receiver_id,
                                           std::string content);
 
+    std::optional< Message > send_announcement(int direct_message_id, int sender_id,
+        										  std::string content);
+
     void set_used_by_client();
 
     void load_direct_messages(std::vector< DirectMessage > direct_messages);
+
+    bool update_last_seen(int direct_message_id, int user_id, date::sys_seconds last_seen_at);
+
+    bool add_pin_message(int direct_message_id, int message_id);
+
+    bool remove_pin_message(int direct_message_id, int message_id);
+
+    bool update_nickname(int direct_message_id, int user_id, std::string nickname);
 
     void clear_data();
 private:

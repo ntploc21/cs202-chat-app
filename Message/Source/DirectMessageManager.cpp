@@ -26,8 +26,17 @@ int DirectMessageManager::new_direct_message(int user_1_id, int user_2_id) {
 
 bool DirectMessageManager::add_message(int direct_message_id, Message message) {
     int pos = findById(direct_message_id);
-	if (pos == -1) return false;
-    return ConversationManager::getInstance().add_message(m_direct_messages[pos].get_conversation_id(), message);
+    if (pos == -1) return false;
+    return ConversationManager::getInstance().add_message(
+        m_direct_messages[pos].get_conversation_id(), message);
+}
+
+bool DirectMessageManager::delete_message(int direct_message_id,
+                                          int message_id) {
+    int pos = findById(direct_message_id);
+    if (pos == -1) return false;
+    return ConversationManager::getInstance().delete_message(
+        m_direct_messages[pos].get_conversation_id(), message_id);
 }
 
 bool DirectMessageManager::delete_direct_message(int direct_message_id) {
@@ -49,6 +58,19 @@ std::optional< DirectMessage > DirectMessageManager::get_direct_message(
     int pos = findById(direct_message_id);
     if (pos == -1) return std::nullopt;
     return m_direct_messages[pos];
+}
+
+std::optional< DirectMessage > DirectMessageManager::get_direct_message(
+    int user_1_id, int user_2_id) {
+    for (auto& dm : m_direct_messages) {
+        if ((dm.get_user_id_1() == user_1_id &&
+             dm.get_user_id_2() == user_2_id) ||
+            (dm.get_user_id_1() == user_2_id &&
+             dm.get_user_id_2() == user_1_id)) {
+            return dm;
+        }
+    }
+    return std::nullopt;
 }
 
 std::vector< DirectMessage > DirectMessageManager::get_direct_messages() {
@@ -75,6 +97,15 @@ std::optional< Message > DirectMessageManager::send_message(
     return m_direct_messages[pos].send_message(sender_id, content);
 }
 
+std::optional< Message > DirectMessageManager::send_announcement(
+    int direct_message_id, int sender_id, std::string content) {
+    if (m_used_by_client) return std::nullopt;
+
+    int pos = findById(direct_message_id);
+    if (pos == -1) return std::nullopt;
+    return m_direct_messages[pos].send_announcement(sender_id, content);
+}
+
 void DirectMessageManager::set_used_by_client() {
     m_direct_messages.clear();
     m_used_by_client = true;
@@ -89,8 +120,77 @@ void DirectMessageManager::load_direct_messages(
     m_next_id = 0;
 }
 
+bool DirectMessageManager::update_last_seen(int direct_message_id, int user_id,
+                                            date::sys_seconds last_seen_at) {
+    int pos = findById(direct_message_id);
+    if (pos == -1) return false;
+
+    m_direct_messages[pos].set_user_last_seen_at(user_id, last_seen_at);
+
+    return true;
+}
+
+bool DirectMessageManager::add_pin_message(int direct_message_id,
+                                           int message_id) {
+    int pos = findById(direct_message_id);
+    if (pos == -1) return false;
+
+    // check if message_id is in conversation
+    auto conv = ConversationManager::getInstance().get_conversation(
+        m_direct_messages[pos].get_conversation_id());
+    if (!conv.has_value()) return false;
+
+    auto messages = conv.value().get_messages();
+    bool found = false;
+
+    // check if message_id is in the pin list
+    for (int pin_id : m_direct_messages[pos].m_pin_message_list) {
+        if (pin_id == message_id) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) return false;
+
+    // add message_id to pin list
+    m_direct_messages[pos].add_pin_message(message_id);
+}
+
+bool DirectMessageManager::remove_pin_message(int direct_message_id,
+                                              int message_id) {
+    int pos = findById(direct_message_id);
+    if (pos == -1) return false;
+
+    // check if message_id is in the pin list
+    bool found = false;
+
+    for (int pin_id : m_direct_messages[pos].m_pin_message_list) {
+        if (pin_id == message_id) {
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) return false;
+    // remove message_id from pin list
+    m_direct_messages[pos].remove_pin_message(message_id);
+
+    return true;
+}
+
+bool DirectMessageManager::update_nickname(int direct_message_id, int user_id,
+                                           std::string nickname) {
+    int pos = findById(direct_message_id);
+    if (pos == -1) return false;
+
+    m_direct_messages[pos].set_user_nickname(user_id, nickname);
+
+    return true;
+}
+
 void DirectMessageManager::clear_data() {
-    if(!m_used_by_client) return;
+    if (!m_used_by_client) return;
     m_direct_messages.clear();
     m_next_id = 0;
 }

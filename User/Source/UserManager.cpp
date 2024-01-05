@@ -88,6 +88,13 @@ void UserManager::load_users(std::vector< User > users) {
 	m_next_id = 0;
 }
 
+bool UserManager::set_online(int user_id, bool online) {
+    int pos = findById(user_id);
+	if (pos == -1) return false;
+    m_users[pos].set_online(online);
+    return true;
+}
+
 void UserManager::clear_data() {
     if(!m_used_by_client) return;
     m_users.clear();

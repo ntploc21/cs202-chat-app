@@ -80,6 +80,13 @@ void ServerLayer::OnClientConnected(const Walnut::ClientInfo& client) {
 
 void ServerLayer::OnClientDisconnected(const Walnut::ClientInfo& client) {
     // ...
+    Walnut::Buffer scratch_buffer{};
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+    stream.WriteRaw< PacketType >(PacketType::ClientLogoutRequest);
+    
+    m_server_controller.handlePacket(client, stream.GetBuffer());
 }
 
 void ServerLayer::OnDataReceived(const Walnut::ClientInfo& client_info,

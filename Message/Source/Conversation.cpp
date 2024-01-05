@@ -5,7 +5,8 @@
 #include "MessageManager.hpp"
 
 Conversation::Conversation() {
-    m_last_msg_at = date::floor< date::days >(std::chrono::system_clock::now());
+    m_last_msg_at = date::floor< std::chrono::duration< int > >(
+        std::chrono::system_clock::now());
 }
 
 Conversation& Conversation::set_conversation_id(int conversation_id) {
@@ -21,8 +22,7 @@ std::vector< Message > Conversation::get_messages() const {
     std::vector< Message > messages{};
 
     for (int i = 0; i < m_messages.size(); i++) {
-        auto msg =
-            MessageManager::getInstance().get_message(m_messages[i]);
+        auto msg = MessageManager::getInstance().get_message(m_messages[i]);
         assert(msg.has_value());
         messages.push_back(msg.value());
     }
@@ -36,13 +36,15 @@ std::optional< Message > Conversation::get_last_message() const {
 }
 
 Conversation& Conversation::add_message(int message_id) {
-    m_last_msg_at = date::floor< date::days >(std::chrono::system_clock::now());
+    m_last_msg_at = date::floor< std::chrono::duration< int > >(
+        std::chrono::system_clock::now());
     m_messages.push_back(message_id);
     return *this;
 }
 
 Conversation& Conversation::add_message(Message message) {
-    m_last_msg_at = date::floor< date::days >(std::chrono::system_clock::now());
+    m_last_msg_at = date::floor< std::chrono::duration< int > >(
+        std::chrono::system_clock::now());
     m_messages.push_back(message.get_msg_id());
     return *this;
 }
@@ -53,9 +55,25 @@ std::optional< Message > Conversation::send_message(int sender_id,
         sender_id, m_conversation_id, content);
 
     if (!msg.has_value()) return std::nullopt;
-    m_last_msg_at = date::floor< date::days >(std::chrono::system_clock::now());
+    m_last_msg_at = date::floor< std::chrono::duration< int > >(
+        std::chrono::system_clock::now());
 
     m_messages.push_back(msg.value().get_msg_id());
+    return msg;
+}
+
+std::optional< Message > Conversation::send_announcement(int sender_id,
+                                                         std::string content) {
+    auto msg = MessageManager::getInstance().send_announcement(
+        sender_id, m_conversation_id, content);
+
+    if (!msg.has_value()) return std::nullopt;
+
+    m_last_msg_at = date::floor< std::chrono::duration< int > >(
+    		std::chrono::system_clock::now());
+
+    m_messages.push_back(msg.value().get_msg_id());
+
     return msg;
 }
 
@@ -82,6 +100,15 @@ Conversation& Conversation::remove_message(Message message) {
 Conversation& Conversation::clear_messages() {
     m_messages.clear();
     return *this;
+}
+
+bool Conversation::has_message(int message_id) const {
+    for (int i = 0; i < m_messages.size(); i++) {
+        if (m_messages[i] == message_id) {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::ostream& operator<<(std::ostream& out, const Conversation& conversation) {

@@ -3,8 +3,8 @@
 #include <iostream>
 
 #include "AuthHandler.hpp"
-#include "FriendHandler.hpp"
 #include "DMHandler.hpp"
+#include "FriendHandler.hpp"
 #include "GroupHandler.hpp"
 
 ServerHandlerFactory::~ServerHandlerFactory() {}
@@ -50,14 +50,40 @@ ServerHandler* ServerHandlerFactory::createHandler(Handler::ID id) {
             break;
         case Handler::ID::RetrieveAllDMs:
             handler = new RetrieveAllDMsHandler();
-			break;
+            break;
         case Handler::ID::SendDirectMessage:
-			handler = new SendDirectMessageHandler();
-			break;
-		case Handler::ID::SendGroupMessage:
+            handler = new SendDirectMessageHandler();
+            break;
+        case Handler::ID::SendGroupMessage:
             handler = new SendGroupMessageHandler();
             break;
-
+        case Handler::ID::UpdateLastSeenDM:
+            handler = new UpdateLastSeenDMHandler();
+            break;
+        case Handler::ID::AddPinMessageDM:
+            handler = new AddPinMessageDMHandler();
+            break;
+        case Handler::ID::RemovePinMessageDM:
+            handler = new RemovePinMessageDMHandler();
+            break;
+        case Handler::ID::AddPinMessageGroup:
+            // handler = new AddPinMessageGroupHandler();
+            break;
+        case Handler::ID::RemovePinMessageGroup:
+            // handler = new RemovePinMessageGroupHandler();
+            break;
+        case Handler::ID::DeleteMessageDM:
+            handler = new DeleteMessageDMHandler();
+            break;
+        case Handler::ID::DeleteMessageGroup:
+            // handler = new DeleteMessageGroupHandler();
+            break;
+        case Handler::ID::UpdateNicknameDM:
+            handler = new UpdateNicknameDMHandler();
+            break;
+        case Handler::ID::UpdateNicknameGroup:
+			// handler = new UpdateNicknameGroupHandler();
+			break;
     }
     return handler;
 }

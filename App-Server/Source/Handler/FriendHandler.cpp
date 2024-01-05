@@ -97,6 +97,8 @@ void AcceptFriendHandler::handleImpl(const Walnut::ClientInfo& client_info,
                                   stream, m_server);
         SendAllFriends(client_friend.value(), PacketType::RetrieveAllFriends,
                        stream, m_server);
+
+        SendSuccess(client_friend.value(), packet_type, stream, m_server);
     }
 
     SendAllFriends(client_info.ID, PacketType::RetrieveAllFriends, stream,

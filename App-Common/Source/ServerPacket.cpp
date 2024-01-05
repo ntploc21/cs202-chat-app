@@ -20,19 +20,39 @@ std::string_view PacketTypeToString(PacketType type) {
         case PacketType::AcceptFriend:
             return "PacketType::AcceptFriend";
         case PacketType::DeclineFriend:
-			return "PacketType::DeclineFriend";
+            return "PacketType::DeclineFriend";
         case PacketType::Unfriend:
-			return "PacketType::Unfriend";
+            return "PacketType::Unfriend";
         case PacketType::RetrievePendingFriendRequests:
-			return "PacketType::RetrievePendingFriendRequests";
+            return "PacketType::RetrievePendingFriendRequests";
         case PacketType::RetrieveAllGroups:
             return "PacketType::RetrieveAllGroups";
         case PacketType::RetrieveAllDMs:
             return "PacketType::RetrieveAllDMs";
         case PacketType::SendDirectMessage:
-			return "PacketType::SendDirectMessage";
+            return "PacketType::SendDirectMessage";
         case PacketType::SendGroupMessage:
             return "PacketType::SendGroupMessage";
+        case PacketType::UpdateLastSeenDM:
+            return "PacketType::UpdateLastSeenDM";
+        case PacketType::AddPinMessageDM:
+            return "PacketType::AddPinMessageDM";
+        case PacketType::RemovePinMessageDM:
+            return "PacketType::RemovePinMessageDM";
+        case PacketType::AddPinMessageGroup:
+            return "PacketType::AddPinMessageGroup";
+        case PacketType::RemovePinMessageGroup:
+            return "PacketType::RemovePinMessageGroup";
+        case PacketType::DeleteMessageDM:
+            return "PacketType::DeleteMessageDM";
+        case PacketType::DeleteMessageGroup:
+            return "PacketType::DeleteMessageGroup";
+        case PacketType::UpdateNicknameDM:
+            return "PacketType::UpdateNicknameDM";
+        case PacketType::UpdateNicknameGroup:
+            return "PacketType::UpdateNicknameGroup";
+        case PacketType::CreateGroup:
+            return "PacketType::CreateGroup";
     }
 
     return "PacketType::<Invalid>";

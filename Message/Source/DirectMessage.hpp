@@ -56,6 +56,7 @@ public:
 	std::optional< Message > send_message(int sender_id, Message message) const;
 	std::optional< Message > send_message(int sender_id, std::string message) const;
 
+	std::optional< Message > send_announcement(int sender_id, std::string message) const;
 public:
 	int m_dm_id{};
 	int m_conversation_id{};

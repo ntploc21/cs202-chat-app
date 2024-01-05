@@ -28,6 +28,9 @@ public:
     std::optional< Message > send_message(int sender_id, int receiver_id,
                                           std::string content);
 
+    std::optional< Message > send_announcement(int sender_id, int receiver_id,
+        											   std::string content);
+
     void set_used_by_client();
 
     void insert_messages(std::vector< Message > messages);

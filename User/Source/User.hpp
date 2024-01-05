@@ -14,7 +14,7 @@ public:
     // make it as a builder using builder design pattern
     User();
     User(std::string username, std::string password, std::string fullname,
-         int user_id = 0, bool active = 1, bool online = 1);
+         int user_id = 0, bool active = 1, bool online = 0);
     virtual ~User() = default;
     int get_user_id() const;
     std::string get_username() const;

@@ -29,13 +29,18 @@ public:
     std::optional< Message > get_last_message(int conversation_id);
 
     bool add_message(int conversation_id, Message message);
+    bool delete_message(int conversation_id, int message_id);
     
     std::optional< Message > send_message(int sender_id, int conversation_id, Message message);
     std::optional< Message > send_message(int sender_id, int conversation_id, std::string message);
+
+    std::optional< Message > send_announcement(int sender_id, int conversation_id, std::string message);
     
     void set_used_by_client();
     
     void insert_conversations(std::vector< Conversation > conversations);
+    
+    bool has_message(int conversation_id, int message_id);
 
     void clear_data();
 private:

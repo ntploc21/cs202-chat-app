@@ -53,6 +53,8 @@ void ClientRegisterHandler::handleImpl(const Walnut::ClientInfo& client_info,
 
     new_user = UserManager::getInstance().get_user(user_id).value();
 
+    UserManager::getInstance().set_online(user_id, true);
+
     auto& client = ClientManager::getInstance()[client_info.ID];
     client = Authenticator::getInstance().add_session(user_id);
 
@@ -97,22 +99,79 @@ void ClientLoginHandler::handleImpl(const Walnut::ClientInfo& client_info,
     auto user_login = UserManager::getInstance().findByUsernameAndPassword(
         username_login, password_login);
 
-    if (user_login.has_value()) {
-        int user_id = user_login.value().get_user_id();
-        auto& client = ClientManager::getInstance()[client_info.ID];
-        client = Authenticator::getInstance().add_session(user_id);
-
-        SendClientConnectionSuccess(m_server, client_info, packet_type,
-                                    user_login.value());
-    } else {
+    if (!user_login.has_value()) {
         SendError(m_server, client_info, packet_type,
                   "Login credentials incorrect!");
+        return;
+    }
+    if (ClientManager::getInstance()
+            .getClientID(user_login.value().get_user_id())
+            .has_value()) {
+        SendError(m_server, client_info, packet_type,
+                  "User already logged in!");
+        return;
+    }
+
+    UserManager::getInstance().set_online(user_login.value().get_user_id(),
+                                          true);
+
+    int user_id = user_login.value().get_user_id();
+    auto& client = ClientManager::getInstance()[client_info.ID];
+    client = Authenticator::getInstance().add_session(user_id);
+
+    SendClientConnectionSuccess(m_server, client_info, packet_type,
+                                user_login.value());
+
+    // broadcast to all clients
+    auto clients = ClientManager::getInstance().getAllClients();
+    for (auto client_id : clients) {
+        if (client_id == client_info.ID) continue;
+
+        Walnut::Buffer scratch_buffer{};
+        scratch_buffer.Allocate(8192);
+
+        Walnut::BufferStreamWriter out_stream(scratch_buffer);
+        out_stream.WriteRaw< PacketType >(PacketType::RetrieveAllUsers);
+
+        auto users = UserManager::getInstance().get_users();
+
+        out_stream.WriteRaw< bool >(true);
+        out_stream.WriteArray(users);
+
+        m_server->SendBufferToClient(
+            client_id,
+            Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
     }
 }
 
 void ClientLogoutHandler::handleImpl(const Walnut::ClientInfo& client_info,
                                      const PacketType packet_type,
                                      Walnut::BufferStreamReader& stream) {
+    auto& client = ClientManager::getInstance()[client_info.ID];
+
+    UserManager::getInstance().set_online(client.get_user_id(), false);
+
+    // broadcast to all clients
+    auto clients = ClientManager::getInstance().getAllClients();
+    for (auto client_id : clients) {
+        if (client_id == client_info.ID) continue;
+
+        Walnut::Buffer scratch_buffer{};
+        scratch_buffer.Allocate(8192);
+
+        Walnut::BufferStreamWriter out_stream(scratch_buffer);
+        out_stream.WriteRaw< PacketType >(PacketType::RetrieveAllUsers);
+
+        auto users = UserManager::getInstance().get_users();
+
+        out_stream.WriteRaw< bool >(true);
+        out_stream.WriteArray(users);
+
+        m_server->SendBufferToClient(
+            client_id,
+            Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
+    }
+
     Walnut::Buffer scratch_buffer{};
     scratch_buffer.Allocate(1024);
 
@@ -123,6 +182,8 @@ void ClientLogoutHandler::handleImpl(const Walnut::ClientInfo& client_info,
     m_server->SendBufferToClient(
         client_info.ID,
         Walnut::Buffer(scratch_buffer, out_stream.GetStreamPosition()));
+
+    ClientManager::getInstance().removeClient(client_info.ID);
 }
 
 void SendError(std::shared_ptr< Walnut::Server > server,

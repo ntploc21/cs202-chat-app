@@ -56,6 +56,22 @@ std::optional< Message > MessageManager::send_message(int sender_id,
     return message;
 }
 
+std::optional< Message > MessageManager::send_announcement(
+    int sender_id, int receiver_id, std::string content) {
+    if (m_used_by_client) return std::nullopt;
+
+    if (!UserManager::getInstance().exists(sender_id)) {
+        return std::nullopt;
+    }
+
+    Message message{++m_next_id, sender_id, receiver_id, content,
+                    MessageType::Announcement};
+
+    m_messages.push_back(message);
+
+    return message;
+}
+
 void MessageManager::set_used_by_client() {
     m_messages.clear();
     m_next_id = 0;
@@ -63,13 +79,13 @@ void MessageManager::set_used_by_client() {
 }
 
 void MessageManager::insert_messages(std::vector< Message > messages) {
-    if(!m_used_by_client) return;
+    if (!m_used_by_client) return;
     m_messages.insert(m_messages.end(), messages.begin(), messages.end());
     m_next_id = 0;
 }
 
 void MessageManager::clear_data() {
-    if(!m_used_by_client) return;
+    if (!m_used_by_client) return;
     m_messages.clear();
     m_next_id = 0;
 }

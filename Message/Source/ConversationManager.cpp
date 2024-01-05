@@ -1,8 +1,8 @@
 #include "ConversationManager.hpp"
 
-#include "MessageManager.hpp"
-
 #include <iostream>
+
+#include "MessageManager.hpp"
 
 ConversationManager::ConversationManager() { load_conversations(); }
 
@@ -65,16 +65,24 @@ std::vector< Message > ConversationManager::get_messages(int conversation_id) {
 std::optional< Message > ConversationManager::get_last_message(
     int conversation_id) {
     int pos = findById(conversation_id);
-    if(pos == -1) return std::nullopt;
-    
+    if (pos == -1) return std::nullopt;
+
     return m_conversations[pos].get_last_message();
 }
 
 bool ConversationManager::add_message(int conversation_id, Message message) {
     int pos = findById(conversation_id);
-    if(pos == -1) return false;
+    if (pos == -1) return false;
     MessageManager::getInstance().add_message(message);
     m_conversations[pos].add_message(message);
+    return true;
+}
+
+bool ConversationManager::delete_message(int conversation_id, int message_id) {
+    int pos = findById(conversation_id);
+    if (pos == -1) return false;
+    MessageManager::getInstance().delete_message(message_id);
+    m_conversations[pos].remove_message(message_id);
     return true;
 }
 
@@ -91,12 +99,24 @@ std::optional< Message > ConversationManager::send_message(int sender_id,
 
 std::optional< Message > ConversationManager::send_message(
     int sender_id, int conversation_id, std::string message) {
-    if(m_used_by_client) return std::nullopt;
+    if (m_used_by_client) return std::nullopt;
 
     int pos = findById(conversation_id);
     if (pos == -1) return std::nullopt;
 
     auto msg = m_conversations[pos].send_message(sender_id, message);
+
+    return msg;
+}
+
+std::optional< Message > ConversationManager::send_announcement(
+    int sender_id, int conversation_id, std::string message) {
+    if (m_used_by_client) return std::nullopt;
+
+    int pos = findById(conversation_id);
+    if (pos == -1) return std::nullopt;
+
+    auto msg = m_conversations[pos].send_announcement(sender_id, message);
 
     return msg;
 }
@@ -111,12 +131,18 @@ void ConversationManager::insert_conversations(
     std::vector< Conversation > conversations) {
     if (!m_used_by_client) return;
     m_conversations.insert(m_conversations.end(), conversations.begin(),
-						   conversations.end());
+                           conversations.end());
     m_next_id = 0;
 }
 
+bool ConversationManager::has_message(int conversation_id, int message_id) {
+    int pos = findById(conversation_id);
+    if (pos == -1) return false;
+    return m_conversations[pos].has_message(message_id);
+}
+
 void ConversationManager::clear_data() {
-    if(!m_used_by_client) return;
+    if (!m_used_by_client) return;
     m_conversations.clear();
     m_next_id = 0;
 }

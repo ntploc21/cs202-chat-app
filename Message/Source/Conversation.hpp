@@ -23,10 +23,15 @@ public:
 
     std::optional< Message > send_message(int sender_id, std::string content);
 
+    std::optional< Message > send_announcement(int sender_id,
+        											   std::string content);
+
     Conversation& remove_message(int message_id);
     Conversation& remove_message(Message message);
 
     Conversation& clear_messages();
+
+    bool has_message(int message_id) const;
 
     friend std::ostream& operator<<(std::ostream& out,
                                     const Conversation& conversation);

@@ -49,6 +49,9 @@ private:
     void UI_FriendsRequest();
     void UI_FriendItem(const User& user, std::string& note);
 
+    // Settings UI
+    void UI_Settings();
+
     // Server event callbacks
     void OnConnected();
     void OnDisconnected();
@@ -61,6 +64,17 @@ private:
 
     void ConnectToServer();
     void LoginToServer();
+
+    void ToDirectMessage(int dm_id);
+    void ToGroupMessage(int group_id);
+
+    void PinMessage(int message_id);
+    void UnpinMessage(int message_id);
+
+    void DeleteMessage(int message_id);
+
+    void UpdateNickname(int user_id, std::string_view nickname);
+
 
     //
     void SendChatMessage(std::string_view message);
@@ -93,6 +107,13 @@ private:
     bool m_view_profile = false;
 
     bool m_has_credentials = false;
+
+    bool m_change_nickname_modal = false;
+    int m_change_nickname_user_id = 0;
+    std::string m_change_nickname{};
+
+    bool m_create_group_modal = false;
+
 
     /* */
 

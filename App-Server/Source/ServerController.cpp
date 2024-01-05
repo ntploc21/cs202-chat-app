@@ -42,6 +42,24 @@ void ServerController::constructHandlers() {
         Handler::ID::Authenticate, Handler::ID::SendDirectMessage};
     m_packet_handlers[PacketType::SendGroupMessage] = {
         Handler::ID::Authenticate, Handler::ID::SendGroupMessage};
+    m_packet_handlers[PacketType::UpdateLastSeenDM] = {
+        Handler::ID::Authenticate, Handler::ID::UpdateLastSeenDM};
+    m_packet_handlers[PacketType::AddPinMessageDM] = {
+        Handler::ID::Authenticate, Handler::ID::AddPinMessageDM};
+    m_packet_handlers[PacketType::RemovePinMessageDM] = {
+        Handler::ID::Authenticate, Handler::ID::RemovePinMessageDM};
+    m_packet_handlers[PacketType::AddPinMessageGroup] = {
+        Handler::ID::Authenticate, Handler::ID::AddPinMessageGroup};
+    m_packet_handlers[PacketType::RemovePinMessageGroup] = {
+        Handler::ID::Authenticate, Handler::ID::RemovePinMessageGroup};
+    m_packet_handlers[PacketType::DeleteMessageDM] = {
+        Handler::ID::Authenticate, Handler::ID::DeleteMessageDM};
+    m_packet_handlers[PacketType::DeleteMessageGroup] = {
+        Handler::ID::Authenticate, Handler::ID::DeleteMessageGroup};
+    m_packet_handlers[PacketType::UpdateNicknameDM] = {
+        Handler::ID::Authenticate, Handler::ID::UpdateNicknameDM};
+    m_packet_handlers[PacketType::UpdateNicknameGroup] = {
+        Handler::ID::Authenticate, Handler::ID::UpdateNicknameGroup};
 }
 
 void ServerController::handlePacket(const Walnut::ClientInfo& client_info,

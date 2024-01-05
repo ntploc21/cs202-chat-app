@@ -23,6 +23,15 @@ namespace Handler {
         RetrieveAllGroups,
         SendDirectMessage,
         SendGroupMessage,
+        UpdateLastSeenDM,
+        AddPinMessageDM,
+        RemovePinMessageDM,
+        AddPinMessageGroup,
+        RemovePinMessageGroup,
+        DeleteMessageDM,
+        DeleteMessageGroup,
+        UpdateNicknameDM,
+        UpdateNicknameGroup,
     };
 };
 

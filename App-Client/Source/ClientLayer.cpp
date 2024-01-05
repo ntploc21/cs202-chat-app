@@ -20,8 +20,11 @@
 #include "Walnut/Serialization/BufferStream.h"
 #include "Walnut/UI/UI.h"
 #include "Walnut/Utils/StringUtils.h"
+#include "date/tz.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include "yaml-cpp/yaml.h"
+
+#include "DirectMessageFilter.hpp"
 
 void ClientLayer::OnAttach() {
     m_scratch_buffer.Allocate(8192);
@@ -76,7 +79,7 @@ void ClientLayer::OnUIRender() {
     }
 
     if (m_current_tab == Tab::Settings) {
-        // ImGui::Text("Settings");
+        UI_Settings();
     }
 
     if (m_view_profile) {
@@ -95,6 +98,30 @@ void ClientLayer::OnUIRender() {
             ImGui::CloseCurrentPopup();
 
         ImGui::PopStyleVar(2);
+
+        ImGui::EndPopup();
+    }
+
+    if (m_change_nickname_modal) {
+        ImGui::OpenPopup("Change nickname");
+        m_change_nickname_modal = false;
+    }
+
+    if (ImGui::BeginPopupModal("Change nickname", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("New nickname");
+        ImGui::InputText("##new_nickname", &m_change_nickname);
+
+        if (ImGui::Button("Change")) {
+            UpdateNickname(m_change_nickname_user_id, m_change_nickname);
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Cancel")) {
+            ImGui::CloseCurrentPopup();
+        }
 
         ImGui::EndPopup();
     }
@@ -435,6 +462,34 @@ void ClientLayer::UI_UserList() {
             std::vector< DirectMessage > direct_messages =
                 DirectMessageManager::getInstance().get_direct_messages();
 
+            if(!search.empty()) {
+                auto dm_spec =
+                    DMNameSpecification(m_current_user.get_user_id(), search) ||
+                    DMLastMessageSpecification(search);
+
+                DirectMessageFilter dm_filter;
+
+                direct_messages = dm_filter.filter(direct_messages, dm_spec);
+            }
+
+            // sort all direct messages by last message at
+
+            std::sort(
+                direct_messages.begin(), direct_messages.end(),
+                [](const DirectMessage& a, const DirectMessage& b) {
+                    auto a_last_message =
+                        ConversationManager::getInstance().get_last_message(
+                            a.get_conversation_id());
+                    auto b_last_message =
+                        ConversationManager::getInstance().get_last_message(
+                            b.get_conversation_id());
+                    if (!a_last_message.has_value()) return false;
+                    if (!b_last_message.has_value()) return true;
+
+                    return a_last_message.value().m_created_at >
+                           b_last_message.value().m_created_at;
+                });
+
             for (auto& direct_message : direct_messages) {
                 if (direct_message.get_user_id_2() ==
                     m_current_user.get_user_id()) {
@@ -464,11 +519,126 @@ void ClientLayer::UI_UserList() {
                         direct_message.get_conversation_id());
 
                 if (message.has_value()) {
+                    std::string content = message.value().m_content;
+
+                    if (message.value().get_from_id() ==
+                        m_current_user.get_user_id()) {
+                        content = "You: " + content;
+                    }
+
+                    ImGui::Text(message.value().m_content.c_str());
+                    ImGui::SameLine();
+
+                    // if the current user's last seen at < the last message's
+                    // created at, bold the text
+
+                    date::sys_seconds last_seen =
+                        direct_message.m_user_1_last_seen_at;
+
+                    if (last_seen < message.value().m_created_at) {
+                        ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+                    }
+
+                    ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+
+                    date::sys_seconds last_message_at =
+                        message.value().m_created_at;
+                    last_message_at += std::chrono::hours(7);
+
+                    ImGui::Text(
+                        date::format("(%H:%M %p)", last_message_at).c_str());
+
+                    ImGui::PopFont();
+
+                    if (last_seen < message.value().m_created_at)
+                        ImGui::PopFont();
+
+                } else {
+                    ImGui::Text("No message");
+                }
+
+                ImGui::EndGroup();
+
+                ImGui::EndGroup();
+
+                // if hover, change the mouse cursor to hand
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                }
+
+                // if clicked, change the chat to this chat
+                if (ImGui::IsItemClicked()) {
+                    ToDirectMessage(direct_message.get_dm_id());
+                }
+
+                ImGui::Separator();
+            }
+
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Group")) {
+            /*std::vector< GroupMessage > group_messages =
+                GroupMessageManager::getInstance().get_group_messages();
+
+            // sort all direct messages by last message at
+
+            std::sort(
+                group_messages.begin(), group_messages.end(),
+                [](const DirectMessage& a, const DirectMessage& b) {
+                    auto a_last_message =
+                        ConversationManager::getInstance().get_last_message(
+                            a.get_conversation_id());
+                    auto b_last_message =
+                        ConversationManager::getInstance().get_last_message(
+                            b.get_conversation_id());
+                    if (!a_last_message.has_value()) return false;
+                    if (!b_last_message.has_value()) return true;
+
+                    return a_last_message.value().m_created_at >
+                           b_last_message.value().m_created_at;
+                });
+
+            for (auto& group_message : group_messages) {
+
+                ImGui::BeginGroup();
+
+                ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
+                ImGui::SameLine();
+
+                ImGui::BeginGroup();
+
+                ImGui::PushFont(Walnut::Application::GetFont("Bold"));
+
+                std::string_view name{group_message.get_group_name()};
+
+                ImGui::Text(name.data());
+
+                ImGui::PopFont();
+
+                auto message =
+                    ConversationManager::getInstance().get_last_message(
+                        group_message.get_conversation_id());
+
+                if (message.has_value()) {
+                    std::string content = message.value().m_content;
+
+                    if (message.value().get_from_id() ==
+                        m_current_user.get_user_id()) {
+                        content = "You: " + content;
+                    }
+
                     ImGui::Text(message.value().m_content.c_str());
                     ImGui::SameLine();
 
                     ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-                    ImGui::BulletText("(10:00 AM)");
+
+                    date::sys_seconds last_message_at =
+                        message.value().m_created_at;
+                    last_message_at += std::chrono::hours(7);
+
+                    ImGui::Text(
+                        date::format("(%H:%M %p)", last_message_at).c_str());
+
                     ImGui::PopFont();
 
                 } else {
@@ -486,39 +656,12 @@ void ClientLayer::UI_UserList() {
 
                 // if clicked, change the chat to this chat
                 if (ImGui::IsItemClicked()) {
-                    m_chat.id = direct_message.get_dm_id();
-                    m_chat.type = 0;
-                    // m_current_chat = direct_message;
+                    ToGroupMessage(group_message.get_group_id());
                 }
 
                 ImGui::Separator();
-            }
+            }*/
 
-            {
-                ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
-                ImGui::SameLine();
-
-                ImGui::BeginGroup();
-
-                ImGui::PushFont(Walnut::Application::GetFont("Bold"));
-                ImGui::Text("Nguyen Van A");
-                ImGui::PopFont();
-
-                ImGui::Text("Hello, how are you?");
-                ImGui::SameLine();
-
-                ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-                ImGui::BulletText("(10:00 AM)");
-                ImGui::PopFont();
-
-                ImGui::EndGroup();
-
-                ImGui::Separator();
-            }
-
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("Others")) {
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
@@ -554,6 +697,7 @@ void ClientLayer::UI_MainCenterDM() {
             .get_conversation(direct_message.get_conversation_id())
             .value();
     std::vector< Message > messages = conversation.get_messages();
+    std::vector< int > pin_msg_ids = direct_message.get_pin_message_list_ids();
 
     if (direct_message.get_user_id_2() == m_current_user.get_user_id()) {
         std::swap(direct_message.m_user_id_1, direct_message.m_user_id_2);
@@ -586,13 +730,40 @@ void ClientLayer::UI_MainCenterDM() {
 
     ImGui::SameLine();
 
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
+    // if online, draw green dot
 
-    ImGui::BulletText("");
+    if (UserManager::getInstance()
+            .get_user(direct_message.m_user_id_2)
+            .value()
+            .is_online()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
 
-    ImGui::PopStyleColor();
+        ImGui::BulletText("");
 
-    ImGui::Text("Last seen 10:00 AM");
+        ImGui::PopStyleColor();
+    } else {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+        ImGui::BulletText("");
+
+        ImGui::PopStyleColor();
+    }
+
+    date::sys_seconds last_seen_at = direct_message.m_user_2_last_seen_at;
+    last_seen_at += std::chrono::hours(7);
+
+    if (date::floor< std::chrono::duration< int > >(
+            std::chrono::system_clock::now()) -
+            last_seen_at <
+        std::chrono::hours(24)) {
+        ImGui::SameLine();
+
+        ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+
+        ImGui::Text(date::format("(last seen %H:%M %p)", last_seen_at).c_str());
+
+        ImGui::PopFont();
+    }
 
     ImGui::EndGroup();
 
@@ -601,7 +772,6 @@ void ClientLayer::UI_MainCenterDM() {
     const float TextPadding = 8.0f;
 
     // draw the chat box
-
     {
         // Reserve enough left-over height for 1 separator + 1 input text
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 10.0f));
@@ -650,26 +820,66 @@ void ClientLayer::UI_MainCenterDM() {
                     ImGui::PushStyleColor(ImGuiCol_Button,
                                           ImVec4(0.0f, 0.0f, 1.0f, 0.1f));
 
-                    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + width);
-
                     ImGui::Button(
                         (content + "##dm_msg" + std::to_string(k)).c_str());
+                    if (ImGui::BeginPopupContextItem(
+                            ("##message_dm_me_" + std::to_string(k)).c_str())) {
+                        // add some options: pin, forward, unsend for everyone
 
-                    ImGui::PopTextWrapPos();
+                        // check if the message is pinned
+
+                        bool is_pinned = false;
+
+                        for (auto& id : pin_msg_ids) {
+                            if (id == messages[k].get_msg_id()) {
+                                is_pinned = true;
+                                break;
+                            }
+                        }
+
+                        if (!is_pinned) {
+                            if (ImGui::Button("Pin")) {
+                                PinMessage(messages[k].get_msg_id());
+                            }
+                        } else {
+                            if (ImGui::Button("Unpin")) {
+                                UnpinMessage(messages[k].get_msg_id());
+                            }
+                        }
+
+                        if (ImGui::Button("Unsend for everyone")) {
+                            DeleteMessage(messages[k].get_msg_id());
+                        }
+
+                        ImGui::EndPopup();
+                    }
 
                     ImGui::PopStyleColor();
                 }
-                ImGui::PushFont(Walnut::Application::GetFont("Italic"));
 
-                // set pos x
+                // if the current time > last_message_at + 24 hours, don't show
+                // the time
 
-                ImGui::SetCursorPosX(ImGui::GetWindowSize().x -
-                                     ImGui::CalcTextSize("10:00 AM").x -
-                                     TextPadding - 10);
+                date::sys_seconds msg_sent_at = messages[j - 1].m_created_at;
+                msg_sent_at += std::chrono::hours(7);
 
-                ImGui::Text("10:00 AM");
+                auto time_str = date::format("%H:%M %p", msg_sent_at);
 
-                ImGui::PopFont();
+                if (date::floor< std::chrono::duration< int > >(
+                        std::chrono::system_clock::now()) -
+                        msg_sent_at <
+                    std::chrono::hours(24)) {
+                    ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+
+                    ImGui::SetCursorPosX(
+                        ImGui::GetWindowSize().x -
+                        ImGui::CalcTextSize(time_str.c_str()).x - TextPadding -
+                        10);
+
+                    ImGui::Text(time_str.c_str());
+
+                    ImGui::PopFont();
+                }
             } else {
                 // message from others (avatar, name, message and time)
                 // messages are aligned to the left and in white
@@ -682,7 +892,8 @@ void ClientLayer::UI_MainCenterDM() {
 
                 ImGui::NewLine();
 
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2 + (j - i - 1) * 33);
+                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2 +
+                                     (j - i - 1) * 33);
 
                 ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
 
@@ -705,20 +916,46 @@ void ClientLayer::UI_MainCenterDM() {
                     float width = ImGui::CalcTextSize(content.c_str()).x;
 
                     ImGui::Button(content.c_str());
-                    if (ImGui::BeginPopupContextItem(("##message_dm_other_" + std::to_string(k)).c_str())) {
-                        // add some options: copy, unsend for everyone, unsend
-                        // for
-                        // 					// me, forward,
-                        // reply, pin
-                        //
-                        // 					// ... add later
-                        //
+                    if (ImGui::BeginPopupContextItem(
+                            ("##message_dm_other_" + std::to_string(k))
+                                .c_str())) {
+                        // add some options: pin, forward, unsend for everyone
+
+                        // check if the message is pinned
+
+                        bool is_pinned = false;
+
+                        for (auto& id : pin_msg_ids) {
+                            if (id == messages[k].get_msg_id()) {
+                                is_pinned = true;
+                                break;
+                            }
+                        }
+
+                        if (!is_pinned) {
+                            if (ImGui::Selectable("Pin")) {
+                                PinMessage(messages[k].get_msg_id());
+                            }
+                        } else {
+                            if (ImGui::Selectable("Unpin")) {
+                                UnpinMessage(messages[k].get_msg_id());
+                            }
+                        }
+
                         ImGui::EndPopup();
                     }
                 }
-                ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-                ImGui::Text("10:00 AM");
-                ImGui::PopFont();
+                date::sys_seconds msg_sent_at = messages[j - 1].m_created_at;
+                msg_sent_at += std::chrono::hours(7);
+
+                if (date::floor< std::chrono::duration< int > >(
+                        std::chrono::system_clock::now()) -
+                        msg_sent_at <
+                    std::chrono::hours(24)) {
+                    ImGui::PushFont(Walnut::Application::GetFont("Italic"));
+                    ImGui::Text(date::format("%H:%M %p", msg_sent_at).c_str());
+                    ImGui::PopFont();
+                }
                 ImGui::EndGroup();
             }
         }
@@ -769,6 +1006,41 @@ void ClientLayer::UI_MainCenterDM() {
 void ClientLayer::UI_MainCenterGroup() {}
 
 void ClientLayer::UI_Info() {
+    if (!m_chat.id) return;
+
+    DirectMessage direct_message = DirectMessageManager::getInstance()
+                                       .get_direct_message(m_chat.id)
+                                       .value();
+
+    std::vector< User > members;
+    members.push_back(UserManager::getInstance()
+                          .get_user(direct_message.m_user_id_1)
+                          .value());
+    members.push_back(UserManager::getInstance()
+                          .get_user(direct_message.m_user_id_2)
+                          .value());
+
+    std::vector< std::string > nicknames;
+    nicknames.push_back(direct_message.m_user_1_nickname);
+    nicknames.push_back(direct_message.m_user_2_nickname);
+
+    std::vector< int > pin_msg_ids = direct_message.get_pin_message_list_ids();
+
+    std::vector< Message > pin_messages;
+
+    for (auto& id : pin_msg_ids) {
+        pin_messages.push_back(
+            MessageManager::getInstance().get_message(id).value());
+    }
+
+    if (direct_message.get_user_id_2() == m_current_user.get_user_id()) {
+        std::swap(direct_message.m_user_id_1, direct_message.m_user_id_2);
+        std::swap(direct_message.m_user_1_nickname,
+                  direct_message.m_user_2_nickname);
+        std::swap(direct_message.m_user_1_last_seen_at,
+                  direct_message.m_user_2_last_seen_at);
+    }
+
     ImGui::SetNextWindowSize(ImVec2(350, 800), ImGuiCond_FirstUseEver);
 
     bool open = true;
@@ -788,7 +1060,10 @@ void ClientLayer::UI_Info() {
     ImGui::PopStyleVar(2);
 
     // center the name
-    std::string name = "Nguyen Van A";
+    std::string name = UserManager::getInstance()
+                           .get_user(direct_message.m_user_id_2)
+                           .value()
+                           .get_fullname();
     ImGui::SetCursorPosX(
         (ImGui::GetWindowSize().x - ImGui::CalcTextSize(name.c_str()).x) *
         0.5f);
@@ -799,7 +1074,13 @@ void ClientLayer::UI_Info() {
     ImGui::PopFont();
 
     // center the status
-    std::string status = "Active now";
+
+    bool online = UserManager::getInstance()
+                      .get_user(direct_message.m_user_id_2)
+                      .value()
+                      .m_online;
+
+    std::string status = online ? "Active now" : "Offline";
     ImGui::SetCursorPosX(
         (ImGui::GetWindowSize().x - ImGui::CalcTextSize(status.c_str()).x) *
         0.5f);
@@ -819,13 +1100,20 @@ void ClientLayer::UI_Info() {
 
     ImGui::SetCursorPosX((ImGui::GetWindowSize().x - 110) * 0.5f);
 
-    ImGui::Button(ICON_FA_USER_CIRCLE);
+    if (ImGui::Button(ICON_FA_USER_CIRCLE)) {
+        m_view_profile = true;
+        m_profile_user = UserManager::getInstance()
+                             .get_user(direct_message.m_user_id_2)
+                             .value();
+    }
     ImGui::SameLine();
 
-    ImGui::Button(ICON_FA_BELL);
+    if (ImGui::Button(ICON_FA_BELL)) {
+    }
     ImGui::SameLine();
 
-    ImGui::Button(ICON_FA_SEARCH);
+    if (ImGui::Button(ICON_FA_SEARCH)) {
+    }
 
     ImGui::PopStyleVar(2);
 
@@ -836,7 +1124,7 @@ void ClientLayer::UI_Info() {
     if (ImGui::CollapsingHeader("Members")) {
         // avatar + name + nickname
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < members.size(); i++) {
             ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
             ImGui::SameLine();
 
@@ -844,15 +1132,11 @@ void ClientLayer::UI_Info() {
 
             ImGui::PushFont(Walnut::Application::GetFont("Bold"));
 
-            ImGui::Text("Nguyen Van A");
+            ImGui::Text(members[i].get_fullname().c_str());
 
             ImGui::PopFont();
 
-            ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-
-            ImGui::Text("Nickname");
-
-            ImGui::PopFont();
+            ImGui::Text(nicknames[i].c_str());
 
             ImGui::EndGroup();
 
@@ -866,7 +1150,32 @@ void ClientLayer::UI_Info() {
 
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
 
-            ImGui::Button(ICON_FA_ELLIPSIS_V);
+            std::string label = "Options_dm_##" + std::to_string(i);
+
+            if (ImGui::Button((ICON_FA_ELLIPSIS_V "##" + std::to_string(i) ).c_str())) {
+                ImGui::OpenPopup(label.c_str());
+            }
+
+            // add a popup with options: view profile, to DM, change nickname
+            if (ImGui::BeginPopup(label.c_str())) {
+                if (ImGui::Selectable("View profile")) {
+                    m_view_profile = true;
+                    m_profile_user = members[i];
+                }
+
+                if (ImGui::Selectable("To DM")) {
+                    ToDirectMessage(direct_message.get_dm_id());
+                }
+
+                if (ImGui::Selectable("Change nickname")) {
+                    // open a modal to change nickname
+                    m_change_nickname_modal = true;
+                    m_change_nickname_user_id = members[i].get_user_id();
+                    m_change_nickname = nicknames[i];
+                }
+
+                ImGui::EndPopup();
+            }
 
             ImGui::PopFont();
 
@@ -878,7 +1187,7 @@ void ClientLayer::UI_Info() {
     if (ImGui::CollapsingHeader("Pin Messages")) {
         // avatar + name + message + time
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < pin_messages.size(); i++) {
             ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(50, 50));
             ImGui::SameLine();
 
@@ -886,15 +1195,22 @@ void ClientLayer::UI_Info() {
 
             ImGui::PushFont(Walnut::Application::GetFont("Bold"));
 
-            ImGui::Text("Nguyen Van A");
+            ImGui::Text(members[i].get_fullname().c_str());
 
             ImGui::PopFont();
 
-            ImGui::Text("Hello, how are you?");
+            ImGui::Text(pin_messages[i].get_content().c_str());
+
             ImGui::SameLine();
 
             ImGui::PushFont(Walnut::Application::GetFont("Italic"));
-            ImGui::BulletText("(10:00 AM)");
+
+            // display the time in the format (HH:MM AM/PM, DD/MM/YYYY)
+
+            ImGui::Text(date::format("(%H:%M %p, %d/%m/%Y)",
+                                     pin_messages[i].m_created_at)
+                            .c_str());
+
             ImGui::PopFont();
 
             ImGui::EndGroup();
@@ -904,7 +1220,7 @@ void ClientLayer::UI_Info() {
     }
 
     // Shared media (images, files)
-    if (ImGui::CollapsingHeader("Media and files")) {
+    /*if (ImGui::CollapsingHeader("Media and files")) {
         // Media
 
         // icon media + Title "Media"
@@ -928,7 +1244,7 @@ void ClientLayer::UI_Info() {
 
         ImGui::PopFont();
         ImGui::PopFont();
-    }
+    }*/
 
     // Options (Mute, Report, Leave, etc)
     if (ImGui::CollapsingHeader("Options")) {
@@ -1188,9 +1504,9 @@ void ClientLayer::UI_FriendList() {
     const float TextPadding = 8.0f;
 
     for (auto user : m_friends) {
-        ImGui::SetCursorPosY(TextPadding);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + TextPadding);
 
-        ImGui::SetCursorPosX(TextPadding);
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + TextPadding);
 
         ImGui::Image(m_test_avt->GetDescriptorSet(), ImVec2(28, 28));
         ImGui::SameLine();
@@ -1221,9 +1537,12 @@ void ClientLayer::UI_FriendList() {
         // message
 
         if (ImGui::Button(ICON_FA_COMMENT)) {
-            m_current_tab = Tab::Chat;
-
-            // ...
+            int dm_id = DirectMessageManager::getInstance()
+                            .get_direct_message(m_current_user.get_user_id(),
+                                                user.get_user_id())
+                            .value()
+                            .get_dm_id();
+            ToDirectMessage(dm_id);
         }
 
         ImGui::SameLine();
@@ -1652,6 +1971,33 @@ void ClientLayer::UI_FriendItem(const User& user, std::string& note) {
     ImGui::EndGroup();
 }
 
+void ClientLayer::UI_Settings() {
+    UI_MainTab();
+
+    ImGui::SetNextWindowSize(ImVec2(350, 800), ImGuiCond_FirstUseEver);
+
+    bool open = true;
+    ImGui::Begin("Friends Tab", &open,
+                 ImGuiWindowFlags_NoDecoration | ImGuiDockNodeFlags_NoTabBar);
+
+    static int style_idx = -1;
+    if (ImGui::Combo("Themes##Selector", &style_idx, "Dark\0Light\0Classic\0")) {
+        switch (style_idx) {
+            case 0:
+                ImGui::StyleColorsDark();
+                break;
+            case 1:
+                ImGui::StyleColorsLight();
+                break;
+            case 2:
+                ImGui::StyleColorsClassic();
+                break;
+        }
+    }
+
+    ImGui::End();
+}
+
 void ClientLayer::OnConnected() {}
 
 void ClientLayer::OnDisconnected() { m_client->Disconnect(); }
@@ -1672,7 +2018,11 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
     std::vector< Message > messages;
 
     int dm_id;
+    int user_id;
+    int msg_id_tmp;
+    int time_tmp;
     Message msg_tmp;
+    std::string nickname_tmp;
 
     std::cout << PacketTypeToString(type) << std::endl;
 
@@ -1862,9 +2212,6 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
                 conversations);
             MessageManager::getInstance().insert_messages(messages);
 
-            // m_chat.type = 0;
-            // m_chat.id = 1;
-
             break;
         case PacketType::SendDirectMessage:
             stream.ReadRaw< bool >(success);
@@ -1883,12 +2230,128 @@ void ClientLayer::OnDataReceived(const Walnut::Buffer buffer) {
 
             DirectMessageManager::getInstance().add_message(dm_id, msg_tmp);
 
-            std::cout << "Send DM" << std::endl;
-            std::cout << dm_id << std::endl;
-            std::cout << msg_tmp << std::endl;
+            if (m_chat.type == 0 && m_chat.id == dm_id) {
+                ToDirectMessage(dm_id);
+            }
 
             break;
         case PacketType::SendGroupMessage:
+
+            break;
+        case PacketType::UpdateLastSeenDM:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadRaw< int >(dm_id);
+            stream.ReadRaw< int >(user_id);
+            stream.ReadRaw< int >(time_tmp);
+
+            DirectMessageManager::getInstance().update_last_seen(
+                dm_id, user_id,
+                date::sys_seconds(std::chrono::seconds(time_tmp)));
+
+            break;
+        case PacketType::AddPinMessageDM:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadRaw< int >(dm_id);
+            stream.ReadRaw< int >(msg_id_tmp);
+            stream.ReadObject(msg_tmp);
+
+            DirectMessageManager::getInstance().add_pin_message(dm_id,
+                                                                msg_id_tmp);
+
+            DirectMessageManager::getInstance().add_message(dm_id, msg_tmp);
+
+            break;
+        case PacketType::AddPinMessageGroup:
+
+            break;
+        case PacketType::RemovePinMessageDM:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+
+                std::cout << error_msg << std::endl;
+
+                break;
+            }
+
+            stream.ReadRaw< int >(dm_id);
+            stream.ReadRaw< int >(msg_id_tmp);
+            stream.ReadObject(msg_tmp);
+
+            DirectMessageManager::getInstance().remove_pin_message(dm_id,
+                                                                   msg_id_tmp);
+
+            DirectMessageManager::getInstance().add_message(dm_id, msg_tmp);
+
+            break;
+        case PacketType::RemovePinMessageGroup:
+
+            break;
+        case PacketType::DeleteMessageDM:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+                std::cout << error_msg << std::endl;
+                break;
+            }
+
+            stream.ReadRaw< int >(dm_id);
+            stream.ReadRaw< int >(msg_id_tmp);
+
+            DirectMessageManager::getInstance().delete_message(dm_id,
+                                                               msg_id_tmp);
+
+            break;
+        case PacketType::DeleteMessageGroup:
+
+            break;
+        case PacketType::UpdateNicknameDM:
+            stream.ReadRaw< bool >(success);
+
+            if (!success) {
+                std::string error_msg;
+                stream.ReadString(error_msg);
+                std::cout << error_msg << std::endl;
+                break;
+            }
+
+            stream.ReadRaw< int >(dm_id);
+            stream.ReadRaw< int >(user_id);
+            stream.ReadString(nickname_tmp);
+            stream.ReadObject(msg_tmp);
+
+            DirectMessageManager::getInstance().update_nickname(dm_id, user_id,
+                                                                nickname_tmp);
+
+            // add an announcement message
+
+            DirectMessageManager::getInstance().add_message(dm_id, msg_tmp);
+            break;
+        case PacketType::UpdateNicknameGroup:
 
             break;
     }
@@ -1977,7 +2440,102 @@ void ClientLayer::LoginToServer() {
     ImGui::CloseCurrentPopup();
 }
 
+void ClientLayer::ToDirectMessage(int dm_id) {
+    m_chat.type = 0;
+    m_chat.id = dm_id;
+
+    m_current_tab = Tab::Chat;
+
+    Walnut::Buffer scratch_buffer;
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+
+    stream.WriteRaw< PacketType >(PacketType::UpdateLastSeenDM);
+    stream.WriteRaw< int >(dm_id);
+
+    m_client->SendBuffer(stream.GetBuffer());
+}
+
+void ClientLayer::ToGroupMessage(int group_id) {
+    m_chat.type = 0;
+    m_chat.id = group_id;
+
+    m_current_tab = Tab::Chat;
+}
+
+void ClientLayer::PinMessage(int message_id) {
+    Walnut::Buffer scratch_buffer;
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+
+    if (!m_chat.type) {
+        stream.WriteRaw< PacketType >(PacketType::AddPinMessageDM);
+    } else {
+        stream.WriteRaw< PacketType >(PacketType::AddPinMessageGroup);
+    }
+    stream.WriteRaw< int >(m_chat.id);
+    stream.WriteRaw< int >(message_id);
+
+    m_client->SendBuffer(stream.GetBuffer());
+}
+
+void ClientLayer::UnpinMessage(int message_id) {
+    Walnut::Buffer scratch_buffer;
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+
+    if (!m_chat.type) {
+        stream.WriteRaw< PacketType >(PacketType::RemovePinMessageDM);
+    } else {
+        stream.WriteRaw< PacketType >(PacketType::RemovePinMessageGroup);
+    }
+    stream.WriteRaw< int >(m_chat.id);
+    stream.WriteRaw< int >(message_id);
+
+    m_client->SendBuffer(stream.GetBuffer());
+}
+
+void ClientLayer::DeleteMessage(int message_id) {
+    Walnut::Buffer scratch_buffer;
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+
+    if (!m_chat.type) {
+        stream.WriteRaw< PacketType >(PacketType::DeleteMessageDM);
+    } else {
+        stream.WriteRaw< PacketType >(PacketType::DeleteMessageGroup);
+    }
+    stream.WriteRaw< int >(m_chat.id);
+    stream.WriteRaw< int >(message_id);
+
+    m_client->SendBuffer(stream.GetBuffer());
+}
+
+void ClientLayer::UpdateNickname(int user_id, std::string_view nickname) {
+    Walnut::Buffer scratch_buffer;
+    scratch_buffer.Allocate(1024);
+
+    Walnut::BufferStreamWriter stream(scratch_buffer);
+
+    if (!m_chat.type) {
+        stream.WriteRaw< PacketType >(PacketType::UpdateNicknameDM);
+    } else {
+        stream.WriteRaw< PacketType >(PacketType::UpdateNicknameGroup);
+    }
+    stream.WriteRaw< int >(m_chat.id);
+    stream.WriteRaw< int >(user_id);
+    stream.WriteString(nickname);
+
+    m_client->SendBuffer(stream.GetBuffer());
+}
+
 void ClientLayer::SendChatMessage(std::string_view message) {
+    if (!message.length()) return;
+
     Walnut::Buffer scratch_buffer;
     scratch_buffer.Allocate(1024);
 
